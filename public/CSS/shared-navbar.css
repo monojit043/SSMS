@@ -1,0 +1,316 @@
+/* ============================================================
+   SSMS — Shared Navbar  (used by dashboard, JE, LE pages)
+   CSS/shared-navbar.css
+   ============================================================ */
+
+/* ── Overrides any old .navbar so both class names work ── */
+header.navbar,
+header.db-navbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 200;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    background: rgba(20, 14, 6, 0.90);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid rgba(212, 169, 106, 0.22);
+    gap: 0;
+}
+
+/* ── Brand ── */
+.db-brand,
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.db-logo {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(212,169,106,.4);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Keep old .logo-circle looking correct on remaining pages */
+.logo-circle {
+    width: 36px; height: 36px;
+    border-radius: 9px !important;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(212,169,106,.4);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Logo image shared rule */
+.logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: inherit;
+}
+
+.db-brand-name,
+.brand-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #f5f0e8;
+    letter-spacing: .5px;
+}
+
+/* ── Nav links ── */
+.db-nav-links,
+.nav-links {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.db-nav-links a,
+.nav-links a {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(245,240,232,.50);
+    text-decoration: none;
+    letter-spacing: .1px;
+    text-transform: none;
+    transition: color .2s, background .2s;
+    /* reset old underline effect */
+    position: static;
+}
+
+.db-nav-links a::after,
+.nav-links a::after { display: none !important; }
+
+.db-nav-links a:hover,
+.nav-links a:hover {
+    color: #f5f0e8;
+    background: rgba(212,169,106,.10);
+}
+
+.db-nav-links a.nav-active,
+.nav-links a.nav-active {
+    color: #d4a96a;
+    background: rgba(212,169,106,.10);
+}
+
+/* ── Right side ── */
+.db-navbar-right,
+.navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+/* ── User dropdown ── */
+.user-dropdown {
+    position: relative;
+}
+
+.user-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 182px;
+    background: #1e1e2c;
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 11px;
+    box-shadow: 0 14px 44px rgba(0,0,0,.5);
+    padding: 6px;
+    display: none;
+    z-index: 600;
+}
+
+.user-dropdown.open .user-dropdown-menu {
+    display: block;
+}
+
+.user-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 12px;
+    background: none;
+    border: none;
+    border-radius: 7px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(245,240,232,.65);
+    cursor: pointer;
+    text-align: left;
+    transition: background .15s, color .15s;
+}
+
+.user-menu-item:hover {
+    background: rgba(245,240,232,.07);
+    color: #f5f0e8;
+}
+
+.user-menu-logout {
+    color: rgba(240,130,130,.7);
+}
+
+.user-menu-logout:hover {
+    background: rgba(185,64,64,.13);
+    color: #e88080;
+}
+
+.user-menu-divider {
+    height: 1px;
+    background: rgba(255,255,255,.07);
+    margin: 4px 2px;
+}
+
+.user-chip-chevron {
+    color: rgba(245,240,232,.35);
+    transition: transform .2s;
+    flex-shrink: 0;
+}
+
+.user-dropdown.open .user-chip-chevron {
+    transform: rotate(180deg);
+}
+
+/* User chip — now a button */
+.db-user-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px 5px 13px;
+    background: rgba(245,240,232,.07);
+    border: 1px solid rgba(212,169,106,.18);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    font-family: 'DM Sans', sans-serif;
+}
+
+.db-user-chip:hover {
+    background: rgba(245,240,232,.11);
+    border-color: rgba(212,169,106,.32);
+}
+
+.db-user-avatar {
+    width: 26px; height: 26px;
+    background: linear-gradient(135deg, #4e7553, #7a9e7e);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.db-user-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #e8c99a;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Session chips (job / unit) — keep but restyle */
+.session-info {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.session-chip {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    color: #e8c99a;
+    background: rgba(212,169,106,.10);
+    border: 1px solid rgba(212,169,106,.22);
+    padding: 3px 10px;
+    border-radius: 6px;
+}
+
+.session-sep {
+    font-size: 12px;
+    color: rgba(245,240,232,.22);
+}
+
+/* Role badge */
+.db-role-badge,
+.nav-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+.role-le, .le-badge {
+    background: rgba(78,117,83,.20);
+    color: #82c789;
+    border: 1px solid rgba(78,117,83,.35);
+}
+
+.role-je {
+    background: rgba(212,169,106,.14);
+    color: #e8c99a;
+    border: 1px solid rgba(212,169,106,.28);
+}
+
+.role-gl {
+    background: rgba(107,127,163,.20);
+    color: #a4b6d8;
+    border: 1px solid rgba(107,127,163,.35);
+}
+
+/* Legacy logout button — kept for any page that still uses it standalone */
+.logout-btn {
+    padding: 7px 16px;
+    background: transparent;
+    border: 1px solid rgba(212,169,106,.28);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(245,240,232,.55);
+    cursor: pointer;
+    transition: background .2s, border-color .2s, color .2s;
+}
+
+.logout-btn:hover {
+    background: rgba(185,64,64,.14);
+    border-color: rgba(185,64,64,.4);
+    color: #e8a0a0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    header.navbar, header.db-navbar { padding: 0 20px; }
+    .db-nav-links a, .nav-links a   { padding: 6px 10px; font-size: 12px; }
+    .db-user-name                   { display: none; }
+}

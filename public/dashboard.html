@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSMS — Analytics Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="CSS/shared-navbar.css">
+    <link rel="stylesheet" href="CSS/dashboard.css">
+    <link rel="stylesheet" href="CSS/change-password.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     TOAST
+══════════════════════════════════════════════════ -->
+<div class="db-toast" id="dbToast"></div>
+
+
+<!-- ══════════════════════════════════════════════════
+     NAVBAR
+══════════════════════════════════════════════════ -->
+<header class="db-navbar">
+    <a class="db-brand" href="/dashboard.html">
+        <div class="db-logo"><img src="Assets/eilround.gif" alt="SSMS" class="logo-img"></div>
+        <span class="db-brand-name">SSMS</span>
+    </a>
+
+    <nav>
+        <ul class="db-nav-links">
+            <li><a href="/dashboard.html" class="nav-active">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                Dashboard
+            </a></li>
+            <li><a href="/spring-details.html" id="jeLink">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                JE Portal
+            </a></li>
+            <li><a href="/le-approval.html" id="leLink">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                LE Approval
+            </a></li>
+        </ul>
+    </nav>
+
+    <div class="db-navbar-right">
+        <span class="db-role-badge" id="roleBadge">—</span>
+        <div class="user-dropdown" id="userDropdown">
+            <button class="db-user-chip" id="userChipTrigger">
+                <div class="db-user-avatar" id="userAvatar">—</div>
+                <span class="db-user-name" id="userNameDisplay">—</span>
+                <svg class="user-chip-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="user-dropdown-menu">
+                <button class="user-menu-item" id="changePwdBtn">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Change Password
+                </button>
+                <div class="user-menu-divider"></div>
+                <button class="user-menu-item" id="changeJobUnitBtn">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                    Change Job / Unit
+                </button>
+                <div class="user-menu-divider"></div>
+                <button class="user-menu-item user-menu-logout" id="logoutBtn">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Logout
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+
+<!-- ══════════════════════════════════════════════════
+     CONTEXT BAR
+══════════════════════════════════════════════════ -->
+<div class="context-bar">
+    <span class="context-bar-label">Context</span>
+
+    <div class="context-select-wrap">
+        <select class="context-select" id="ctxJobNo">
+            <option value="">— Job No. —</option>
+        </select>
+        <svg class="context-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+
+    <div class="context-select-wrap">
+        <select class="context-select" id="ctxUnitNo">
+            <option value="">— Unit No. —</option>
+        </select>
+        <svg class="context-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+
+    <button class="context-load-btn" id="ctxLoadBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.45"/></svg>
+        Load Analytics
+    </button>
+
+    <div class="context-bar-info">
+        <div class="context-job-chip" id="activeContextChip" style="display:none;">
+            <div class="context-dot"></div>
+            <span id="activeContextLabel">—</span>
+        </div>
+        <div class="last-updated" id="lastUpdatedWrap" style="display:none;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span id="lastUpdatedText">—</span>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════
+     PAGE BODY
+══════════════════════════════════════════════════ -->
+<div class="db-body">
+
+    <!-- Page Header -->
+    <div class="db-page-header">
+        <div class="db-page-header-left">
+            <span class="db-eyebrow">Spring Schedule Management System</span>
+            <h1 class="db-page-title">Analytics <em>Dashboard</em></h1>
+            <p class="db-page-sub" id="dashSubtitle">Select a Job &amp; Unit above to load project analytics.</p>
+        </div>
+        <div class="db-header-actions">
+            <button class="btn-refresh-dash" id="refreshBtn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.45"/></svg>
+                Refresh
+            </button>
+            <button class="btn-export-dash" id="exportBtn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Nav -->
+    <div class="quicknav-row" id="quicknavRow">
+        <a href="/spring-details.html" class="quicknav-btn je-btn" id="quickJeBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            Open JE Portal
+        </a>
+        <a href="/le-approval.html" class="quicknav-btn le-btn" id="quickLeBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Open LE Approval
+        </a>
+    </div>
+
+    <!-- Aggregate-mode banner — shown when the selected unit is a master unit -->
+    <div class="le-aggregate-banner hidden" id="dashAggregateBanner">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><path d="M2 21v-2a4 4 0 0 1 4-4h2"/><path d="M14 21v-2a4 4 0 0 1 4-4h2"/></svg>
+        <span>Viewing combined data — Master <strong id="dashAggMasterUnit"></strong> (<span id="dashAggMembers"></span>)</span>
+    </div>
+
+    <!-- ── MAIN DASHBOARD (hidden until data loads) ── -->
+    <div id="dashContent" style="display:none;">
+
+        <!-- ── KPI ROW ── -->
+        <div class="kpi-row">
+            <div class="kpi-card kpi-total">
+                <div class="kpi-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                </div>
+                <div class="kpi-num" id="kpiTotal">0</div>
+                <div class="kpi-label">Total Springs</div>
+                <div class="kpi-delta neutral" id="kpiTotalDelta">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    All records
+                </div>
+            </div>
+            <div class="kpi-card kpi-approved">
+                <div class="kpi-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div class="kpi-num" id="kpiApproved">0</div>
+                <div class="kpi-label">Approved</div>
+                <div class="kpi-rate-bar-wrap">
+                    <div class="kpi-rate-track"><div class="kpi-rate-fill" id="approvalRateBar" style="width:0%"></div></div>
+                    <div class="kpi-rate-label" id="approvalRateLabel">0% approval rate</div>
+                </div>
+            </div>
+            <div class="kpi-card kpi-pending">
+                <div class="kpi-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div class="kpi-num" id="kpiPending">0</div>
+                <div class="kpi-label">Pending Review</div>
+                <div class="kpi-delta neutral" id="kpiPendingDelta">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Awaiting decision
+                </div>
+            </div>
+            <div class="kpi-card kpi-rejected">
+                <div class="kpi-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </div>
+                <div class="kpi-num" id="kpiRejected">0</div>
+                <div class="kpi-label">Rejected / Hold</div>
+                <div class="kpi-delta neutral" id="kpiRejectedDelta">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    Needs attention
+                </div>
+            </div>
+            <div class="kpi-card kpi-lines">
+                <div class="kpi-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </div>
+                <div class="kpi-num" id="kpiLines">0</div>
+                <div class="kpi-label">Lines Covered</div>
+                <div class="kpi-delta neutral" id="kpiLinesDelta">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Distinct line IDs
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ── CHART ROW: Donut + Type Bar ── -->
+        <div class="chart-row">
+
+            <!-- Status Donut -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title-block">
+                        <div class="chart-title">Status Breakdown</div>
+                        <div class="chart-sub">Distribution by approval status</div>
+                    </div>
+                    <span class="chart-badge" id="statusBadge">All Springs</span>
+                </div>
+                <div class="chart-body">
+                    <canvas id="statusDonutChart" style="max-height:240px;"></canvas>
+                    <div class="donut-centre-wrap">
+                        <div class="donut-centre-num" id="donutTotal">0</div>
+                        <div class="donut-centre-label">Total</div>
+                    </div>
+                </div>
+                <div class="chart-legend" id="statusLegend"></div>
+            </div>
+
+            <!-- Type Bar Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title-block">
+                        <div class="chart-title">Springs by Type</div>
+                        <div class="chart-sub">Count per spring arrangement type</div>
+                    </div>
+                    <span class="chart-badge" id="typeBadge">All Types</span>
+                </div>
+                <div class="chart-body" style="min-height:260px;">
+                    <canvas id="typeBarChart" style="width:100%;"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- ── SECOND ROW: Engineer Table + Line Progress ── -->
+        <div class="second-row">
+
+            <!-- Engineer Performance -->
+            <div class="engineer-card" id="engineerCard">
+                <div class="section-header-row">
+                    <div class="section-title-block">
+                        <div class="section-eyebrow">Team Performance</div>
+                        <div class="section-title">Engineer Breakdown</div>
+                        <div class="section-sub">Submissions &amp; approval rate per engineer</div>
+                    </div>
+                </div>
+                <table class="eng-table">
+                    <thead>
+                        <tr>
+                            <th>Engineer</th>
+                            <th>Total</th>
+                            <th>Approved</th>
+                            <th>Pending</th>
+                            <th>Rejected</th>
+                            <th>Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody id="engTableBody">
+                        <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--bark-light);font-size:13px;">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Line-wise Progress -->
+            <div class="line-progress-card">
+                <div class="section-header-row">
+                    <div class="section-title-block">
+                        <div class="section-eyebrow">Line Coverage</div>
+                        <div class="section-title">Line-wise Progress</div>
+                        <div class="section-sub">Approval completion per stress line</div>
+                    </div>
+                </div>
+                <div class="line-list" id="lineList">
+                    <div style="text-align:center;padding:24px;color:var(--bark-light);font-size:13px;">Loading…</div>
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- ── BOTTOM ROW: CSH/VSH split + Activity Feed ── -->
+        <div class="bottom-row">
+
+            <!-- CSH vs VSH mini card -->
+            <div class="mini-stat-card">
+                <div class="section-header-row" style="margin-bottom:12px;">
+                    <div class="section-title-block">
+                        <div class="section-eyebrow">Spring Category</div>
+                        <div class="section-title">CSH vs VSH</div>
+                    </div>
+                </div>
+
+                <div class="mini-split-row">
+                    <div class="mini-split-item csh">
+                        <div class="mini-split-type">CSH</div>
+                        <div class="mini-split-num" id="cshCount">0</div>
+                        <div class="mini-split-label">Constant Hanger</div>
+                    </div>
+                    <div class="mini-split-item vsh">
+                        <div class="mini-split-type">VSH</div>
+                        <div class="mini-split-num" id="vshCount">0</div>
+                        <div class="mini-split-label">Variable Hanger</div>
+                    </div>
+                </div>
+
+                <div class="mini-divider"></div>
+
+                <!-- CSH/VSH mini donut -->
+                <div style="position:relative;height:160px;display:flex;align-items:center;justify-content:center;">
+                    <canvas id="cshVshChart" style="max-height:160px;"></canvas>
+                </div>
+
+                <div class="mini-divider"></div>
+
+                <div class="mini-stat-row">
+                    <div class="mini-stat-line">
+                        <span class="mini-stat-line-label">CSH Approved</span>
+                        <span class="mini-stat-line-val" id="cshApproved">—</span>
+                    </div>
+                    <div class="mini-stat-line">
+                        <span class="mini-stat-line-label">VSH Approved</span>
+                        <span class="mini-stat-line-val" id="vshApproved">—</span>
+                    </div>
+                    <div class="mini-stat-line">
+                        <span class="mini-stat-line-label">Engineers Active</span>
+                        <span class="mini-stat-line-val" id="engCount">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="activity-card">
+                <div class="section-header-row">
+                    <div class="section-title-block">
+                        <div class="section-eyebrow">Live Feed</div>
+                        <div class="section-title">Recent Activity</div>
+                        <div class="section-sub">Latest spring records added or updated</div>
+                    </div>
+                    <span class="chart-badge" id="activityCount">12 records</span>
+                </div>
+                <div class="activity-feed" id="activityFeed">
+                    <div style="text-align:center;padding:24px;color:var(--bark-light);font-size:13px;">Loading…</div>
+                </div>
+            </div>
+
+        </div>
+
+    </div><!-- /dashContent -->
+
+
+    <!-- Empty state (before job/unit selected) -->
+    <div id="dashPlaceholder" class="db-empty">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8" style="opacity:.35;">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+        </svg>
+        <h3>No Project Loaded</h3>
+        <p>Select a Job No. and Unit No. above, then click <strong>Load Analytics</strong> to view the dashboard.</p>
+    </div>
+
+    <!-- Loading state -->
+    <div id="dashLoading" class="db-loading" style="display:none;">
+        <div class="db-spinner"></div>
+        <span>Loading analytics…</span>
+    </div>
+
+</div><!-- /db-body -->
+
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="cpw-backdrop" id="changePwdOverlay" style="display:none;">
+    <div class="cpw-box">
+        <div class="cpw-header">
+            <h3 class="cpw-title">Change Password</h3>
+            <button class="cpw-close" id="cpwClose" title="Close">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        <div class="cpw-body">
+            <div class="cpw-field">
+                <label class="cpw-label">Current Password</label>
+                <input class="cpw-input" type="password" id="cpwCurrent" placeholder="Enter current password">
+            </div>
+            <div class="cpw-field">
+                <label class="cpw-label">New Password</label>
+                <input class="cpw-input" type="password" id="cpwNew" placeholder="Enter new password">
+            </div>
+            <div class="cpw-field">
+                <label class="cpw-label">Confirm New Password</label>
+                <input class="cpw-input" type="password" id="cpwConfirm" placeholder="Confirm new password">
+            </div>
+        </div>
+        <div class="cpw-error" id="cpwError"></div>
+        <div class="cpw-footer">
+            <button class="cpw-btn cpw-cancel" id="cpwCancel">Cancel</button>
+            <button class="cpw-btn cpw-save" id="cpwSave">Update Password</button>
+        </div>
+    </div>
+</div>
+
+<script src="JS/dashboard.js"></script>
+<script src="JS/change-password.js"></script>
+</body>
+</html>

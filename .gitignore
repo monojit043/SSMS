@@ -1,0 +1,13 @@
+# Environment — contains real credentials, never commit
+backend/.env
+
+# Dependencies — restored via npm install
+backend/node_modules/
+
+# Temp files generated at runtime
+backend/temp.xlsx
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp

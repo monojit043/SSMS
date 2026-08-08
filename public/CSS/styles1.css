@@ -1,0 +1,768 @@
+/* ============================================================
+   SSMS — Spring Schedule Management System
+   CSS/styles1.css
+   ============================================================ */
+
+/* ── RESET & BASE ── */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --ivory:       #f5f0e8;
+    --cream:       #ede6d6;
+    --sage:        #7a9e7e;
+    --sage-deep:   #4e7553;
+    --bark:        #3b2e1e;
+    --bark-light:  #6b5440;
+    --blush:       #d4a96a;
+    --blush-light: #e8c99a;
+}
+
+html, body {
+    height: 100%;
+    font-family: 'DM Sans', sans-serif;
+}
+
+body {
+    background: var(--bark);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+
+/* ============================================================
+   NAVBAR
+   ============================================================ */
+
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 16px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(20, 14, 6, 0.65);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(212, 169, 106, 0.25);
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgba(212, 169, 106, 0.35);
+    flex-shrink: 0;
+}
+
+.logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.brand-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ivory);
+    letter-spacing: 4px;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 38px;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: rgba(245, 240, 232, 0.65);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: color 0.3s;
+    position: relative;
+}
+
+.nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 0;
+    height: 1.5px;
+    background: var(--blush);
+    transition: width 0.3s ease;
+}
+
+.nav-links a:hover {
+    color: var(--blush-light);
+}
+
+.nav-links a:hover::after {
+    width: 100%;
+}
+
+
+/* ============================================================
+   PAGE LAYOUT
+   ============================================================ */
+
+.page-wrapper {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+
+/* ============================================================
+   HERO PANEL — LEFT
+   ============================================================ */
+
+.hero-panel {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Background photo */
+.hero-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    transform: scale(1.06);
+    animation: slowZoom 22s ease-in-out infinite alternate;
+}
+
+@keyframes slowZoom {
+    from { transform: scale(1.06); }
+    to   { transform: scale(1.13); }
+}
+
+/* Dark gradient overlay — heavier at bottom so text pops */
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        170deg,
+        rgba(15, 10, 4, 0.45)  0%,
+        rgba(59, 46, 30, 0.25) 40%,
+        rgba(15, 10, 4, 0.80) 100%
+    );
+}
+
+/* Decorative concentric rings — bottom-right corner */
+.hero-deco {
+    position: absolute;
+    bottom: -50px;
+    right: -50px;
+    width: 340px;
+    height: 340px;
+    border-radius: 50%;
+    border: 1px solid rgba(212, 169, 106, 0.22);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.hero-deco::before {
+    content: '';
+    position: absolute;
+    inset: 36px;
+    border-radius: 50%;
+    border: 1px solid rgba(212, 169, 106, 0.14);
+}
+
+.hero-deco::after {
+    content: '';
+    position: absolute;
+    inset: 72px;
+    border-radius: 50%;
+    border: 1px solid rgba(212, 169, 106, 0.08);
+}
+
+/* ── Floating product image ── */
+.hero-product-wrap {
+    position: absolute;
+    top: 88px;
+    right: 32px;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    animation: floatUpDown 5s ease-in-out infinite;
+}
+
+@keyframes floatUpDown {
+    0%, 100% { transform: translateY(0px);   }
+    50%       { transform: translateY(-12px); }
+}
+
+.hero-product-img {
+    width: 140px;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.65))
+            drop-shadow(0 4px 8px rgba(212, 169, 106, 0.2));
+}
+
+.hero-product-badge {
+    background: rgba(20, 14, 6, 0.55);
+    border: 1px solid rgba(212, 169, 106, 0.5);
+    color: var(--blush-light);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* ── Hero text content ── */
+.hero-content {
+    position: relative;
+    z-index: 3;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 52px 48px;
+}
+
+/* Live status pill */
+.hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(212, 169, 106, 0.18);
+    border: 1px solid rgba(212, 169, 106, 0.4);
+    padding: 7px 16px;
+    border-radius: 24px;
+    margin-bottom: 22px;
+    width: fit-content;
+    backdrop-filter: blur(6px);
+}
+
+.hero-tag-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--blush);
+    box-shadow: 0 0 6px rgba(212, 169, 106, 0.8);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1;   transform: scale(1);   }
+    50%       { opacity: 0.4; transform: scale(0.75); }
+}
+
+.hero-tag span {
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--blush-light);
+    font-weight: 500;
+}
+
+/* Main heading */
+.hero-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(34px, 3.6vw, 54px);
+    font-weight: 300;
+    color: #ffffff;
+    line-height: 1.12;
+    letter-spacing: 1px;
+    margin-bottom: 22px;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.5);
+}
+
+.hero-title em {
+    font-style: italic;
+    color: var(--blush-light);
+}
+
+/* Golden accent line */
+.hero-divider {
+    width: 52px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--blush), transparent);
+    margin-bottom: 20px;
+    border-radius: 2px;
+}
+
+/* Subtitle */
+.hero-subtitle {
+    font-size: 14px;
+    color: rgba(245, 240, 232, 0.72);
+    line-height: 1.75;
+    max-width: 320px;
+    font-weight: 300;
+    letter-spacing: 0.3px;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.4);
+}
+
+
+/* ============================================================
+   LOGIN PANEL — RIGHT
+   ============================================================ */
+
+.login-panel {
+    background: var(--ivory);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 96px 64px 56px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Subtle ambient glow blobs */
+.login-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(circle at 75% 18%, rgba(122, 158, 126, 0.10) 0%, transparent 48%),
+        radial-gradient(circle at 25% 82%, rgba(212, 169, 106, 0.08) 0%, transparent 48%);
+    pointer-events: none;
+}
+
+/* Decorative corner bracket */
+.login-panel::after {
+    content: '';
+    position: absolute;
+    top: 108px;
+    right: 36px;
+    width: 80px;
+    height: 80px;
+    border-top: 1.5px solid rgba(122, 158, 126, 0.3);
+    border-right: 1.5px solid rgba(122, 158, 126, 0.3);
+    pointer-events: none;
+}
+
+/* Animated form wrapper */
+.login-form-wrapper {
+    width: 100%;
+    max-width: 370px;
+    position: relative;
+    z-index: 2;
+    animation: fadeUp 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* Headings */
+.login-eyebrow {
+    font-size: 11px;
+    letter-spacing: 3.5px;
+    text-transform: uppercase;
+    color: var(--sage-deep);
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.login-heading {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 48px;
+    font-weight: 600;
+    color: var(--bark);
+    line-height: 1.0;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.login-subheading {
+    font-size: 14px;
+    color: var(--bark-light);
+    font-weight: 300;
+    margin-bottom: 36px;
+    opacity: 0.75;
+}
+
+/* Form fields */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--bark);
+    font-weight: 600;
+    margin-bottom: 8px;
+    opacity: 0.8;
+}
+
+.input-wrapper {
+    position: relative;
+}
+
+.input-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--bark-light);
+    opacity: 0.45;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+.input-wrapper:focus-within .input-icon {
+    opacity: 0.85;
+    color: var(--sage-deep);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 13px 16px 13px 44px;
+    background: #ffffff;
+    border: 1.5px solid rgba(59, 46, 30, 0.14);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--bark);
+    transition: border-color 0.3s, box-shadow 0.3s;
+    outline: none;
+}
+
+.form-group input::placeholder {
+    color: rgba(59, 46, 30, 0.35);
+    font-weight: 300;
+}
+
+.form-group input:focus {
+    border-color: var(--sage);
+    box-shadow: 0 0 0 4px rgba(122, 158, 126, 0.15);
+}
+
+/* Login button */
+.login-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 15px;
+    background: var(--bark);
+    color: var(--ivory);
+    border: none;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Gradient shimmer on hover */
+.login-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--sage-deep) 0%, #2e4d32 100%);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+}
+
+.login-btn span {
+    position: relative;
+    z-index: 1;
+}
+
+.login-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 36px rgba(59, 46, 30, 0.28);
+}
+
+.login-btn:hover::before {
+    opacity: 1;
+}
+
+.login-btn:active {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(59, 46, 30, 0.2);
+}
+
+/* Footer */
+.login-footer {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(59, 46, 30, 0.1);
+    text-align: center;
+}
+
+.login-footer p {
+    font-size: 11px;
+    color: rgba(59, 46, 30, 0.38);
+    letter-spacing: 0.8px;
+}
+
+/* ============================================================
+   SITE FOOTER — full width, below the hero/login split
+   ============================================================ */
+.site-footer {
+    flex-shrink: 0;
+    background: #1e160c;
+    border-top: 1px solid rgba(212, 169, 106, 0.2);
+    height: 58px;
+    display: flex;
+    align-items: center;
+    padding: 0 48px;
+    gap: 0;
+}
+
+.footer-inner {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+/* Left — brand + copyright */
+.footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.footer-logo {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, var(--blush), var(--sage));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--bark);
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+}
+
+.footer-brand-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.footer-brand-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ivory);
+    letter-spacing: 3px;
+    line-height: 1;
+}
+
+.footer-copy {
+    font-size: 10px;
+    color: rgba(245, 240, 232, 0.28);
+    letter-spacing: 0.5px;
+}
+
+/* Center — help contact */
+.footer-help {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.footer-help-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--blush-light);
+    opacity: 0.7;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.footer-help-label svg {
+    color: var(--blush);
+    flex-shrink: 0;
+}
+
+.footer-contacts {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid rgba(212, 169, 106, 0.15);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.footer-contact {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 16px;
+    transition: background 0.2s;
+}
+
+.footer-contact:hover {
+    background: rgba(212, 169, 106, 0.07);
+}
+
+.footer-contact + .footer-contact {
+    border-left: 1px solid rgba(212, 169, 106, 0.15);
+}
+
+.footer-contact-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+    background: linear-gradient(135deg, rgba(212,169,106,0.35), rgba(122,158,126,0.35));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--blush-light);
+    flex-shrink: 0;
+    letter-spacing: 0.2px;
+}
+
+.footer-contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.footer-contact-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(245, 240, 232, 0.75);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.footer-contact-phone {
+    font-size: 10px;
+    color: var(--sage);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-decoration: none;
+    transition: color 0.2s;
+    white-space: nowrap;
+}
+
+.footer-contact-phone:hover {
+    color: var(--blush-light);
+}
+
+/* Right — system tag */
+.footer-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.footer-meta-tag {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(245, 240, 232, 0.22);
+}
+
+.footer-meta-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: rgba(212, 169, 106, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .site-footer { padding: 0 20px; height: auto; padding-top: 12px; padding-bottom: 12px; }
+    .footer-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .footer-help  { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .footer-meta  { display: none; }
+}
+
+/* Season badge */
+.season-badge {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    opacity: 0.5;
+    color: var(--bark-light);
+}
+
+.season-badge span {
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--bark-light);
+    font-weight: 500;
+}
+
+
+/* ============================================================
+   RESPONSIVE — mobile: hide hero, full-width login
+   ============================================================ */
+
+@media (max-width: 900px) {
+    body {
+        overflow: auto;
+    }
+
+    .page-wrapper {
+        grid-template-columns: 1fr;
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .hero-panel {
+        display: none;
+    }
+
+    .login-panel {
+        padding: 100px 28px 60px;
+        min-height: 100vh;
+    }
+}

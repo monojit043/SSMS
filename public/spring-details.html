@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSMS — Spring Schedule Management</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="CSS/details.css">
+    <link rel="stylesheet" href="CSS/shared-navbar.css">
+    <link rel="stylesheet" href="CSS/change-password.css">
+</head>
+
+<body>
+
+    <!-- ══════════════════════════════════════════════════
+     JOB / UNIT SELECTION MODAL
+═══════════════════════════════════════════════════ -->
+    <div class="modal-backdrop" id="jobModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-logo">
+                    <div class="logo-circle">SS</div>
+                    <span class="brand-name">SSMS</span>
+                </div>
+                <div class="modal-tag">
+                    <div class="tag-dot"></div>
+                    <span>Session Setup</span>
+                </div>
+            </div>
+            <h2 class="modal-heading">Select Job &amp; Unit</h2>
+            <p class="modal-subtext">Choose the project context before entering spring data.</p>
+            <form id="jobForm">
+                <div class="modal-field">
+                    <label for="modalJobNo"><span class="field-num">01</span>Job No.</label>
+                    <div class="select-wrapper">
+                        <select id="modalJobNo" required>
+                            <option value="">— Select Job No. —</option>
+                        </select>
+                        <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="modal-field">
+                    <label for="modalUnitNo"><span class="field-num">02</span>Unit No.</label>
+                    <div class="select-wrapper">
+                        <select id="modalUnitNo" required>
+                            <option value="">— Select Unit No. —</option>
+                        </select>
+                        <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary modal-submit">
+                    <span>Proceed to Data Entry</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </form>
+            <p class="modal-footer-note">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 8v4M12 16h.01" />
+                </svg>
+                Job &amp; Unit selections are locked for the session. Re-login to change.
+            </p>
+        </div>
+    </div>
+
+
+    <!-- NAVBAR -->
+    <header class="navbar">
+        <a class="db-brand" href="/dashboard.html">
+            <div class="db-logo"><img src="Assets/eilround.gif" alt="SSMS" class="logo-img"></div>
+            <span class="db-brand-name">SSMS</span>
+        </a>
+
+        <nav>
+            <ul class="nav-links">
+                <li>
+                    <a href="/dashboard.html">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" />
+                            <rect x="14" y="3" width="7" height="7" />
+                            <rect x="3" y="14" width="7" height="7" />
+                            <rect x="14" y="14" width="7" height="7" />
+                        </svg>
+                        Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="/spring-details.html" class="nav-active">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="8" r="4" />
+                            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                        </svg>
+                        JE Portal
+                    </a>
+                </li>
+                <li id="leNavItem">
+                    <a href="/le-approval.html">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="9 11 12 14 22 4" />
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                        </svg>
+                        LE Approval
+                    </a>
+                </li>
+                <li>
+                    <button type="button" id="notesNavBtn" class="nav-notes-btn">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                            <polyline points="10 9 9 9 8 9" />
+                        </svg>
+                        Notes
+                    </button>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="navbar-right">
+            <div class="session-info">
+                <span class="session-chip" id="sessionJobDisplay">—</span>
+                <span class="session-sep">/</span>
+                <span class="session-chip" id="sessionUnitDisplay">—</span>
+            </div>
+            <span class="db-role-badge role-je" id="navBadge">JE</span>
+            <div class="user-dropdown" id="userDropdown">
+                <button class="db-user-chip" id="userChipTrigger">
+                    <div class="db-user-avatar" id="userAvatar">—</div>
+                    <span class="db-user-name" id="userNameDisplay">—</span>
+                    <svg class="user-chip-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5">
+                        <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                </button>
+                <div class="user-dropdown-menu">
+                    <button class="user-menu-item" id="changePwdBtn">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        Change Password
+                    </button>
+                    <div class="user-menu-divider"></div>
+                    <button class="user-menu-item" id="changeJobUnitBtn">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M17 1l4 4-4 4" />
+                            <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                            <path d="M7 23l-4-4 4-4" />
+                            <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                        </svg>
+                        Change Job / Unit
+                    </button>
+                    <div class="user-menu-divider"></div>
+                    <button class="user-menu-item user-menu-logout" id="logoutBtn">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                            <polyline points="16 17 21 12 16 7" />
+                            <line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+
+    <!-- PAGE BODY -->
+    <div id="mainContent">
+        <main class="page-main">
+
+            <!-- ══════════════════════════════════════
+         LEFT SIDEBAR
+    ═══════════════════════════════════════ -->
+            <aside class="context-panel">
+                <div class="context-inner">
+
+                    <div class="context-tag">
+                        <div class="tag-dot"></div>
+                        <span>Active Session</span>
+                    </div>
+
+                    <h2 class="context-title">Data<br><em>Entry</em><br>Module</h2>
+
+                    <div class="context-divider"></div>
+
+                    <!-- Sidebar Tabs -->
+                    <div class="sidebar-tabs">
+                        <button class="sidebar-tab active" id="tabEntry" onclick="switchSidebarTab('entry')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                            Data Entry
+                        </button>
+                        <button class="sidebar-tab" id="tabView" onclick="switchSidebarTab('view')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            View Springs
+                            <span class="tab-alert-badge" id="tabViewAlert" style="display:none;">0</span>
+                        </button>
+                    </div>
+
+                    <!-- DATA ENTRY TAB -->
+                    <div class="sidebar-pane" id="paneEntry">
+
+                        <!-- Live Tag Preview -->
+                        <div class="tag-preview-card" id="tagCard">
+                            <span class="tag-preview-label">Generated Tag</span>
+                            <span class="tag-preview-value" id="tagDisplay">—</span>
+                            <div class="tag-group-caution hidden" id="tagGroupCaution">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                                <span>Unit <strong id="tagGroupLiteralUnit"></strong> is grouped under Master Unit <strong id="tagGroupMasterUnit"></strong> — this tag follows the master's combined numbering.</span>
+                            </div>
+                        </div>
+
+                        <!-- Section completion indicators -->
+                        <div class="sidebar-section-status">
+                            <div class="ss-item" id="ssLine">
+                                <div class="ss-dot"></div>
+                                <span>Line Info</span>
+                            </div>
+                            <div class="ss-item" id="ssPipe">
+                                <div class="ss-dot"></div>
+                                <span>Pipe Specs</span>
+                            </div>
+                            <div class="ss-item" id="ssArrangement">
+                                <div class="ss-dot"></div>
+                                <span>Arrangement</span>
+                            </div>
+                            <div class="ss-item" id="ssDimension">
+                                <div class="ss-dot"></div>
+                                <span>Dimensions</span>
+                            </div>
+                            <div class="ss-item" id="ssLoad">
+                                <div class="ss-dot"></div>
+                                <span>Loads</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- VIEW SPRINGS TAB -->
+                    <div class="sidebar-pane hidden-pane" id="paneView">
+                        <div class="view-springs-header">
+                            <span class="preview-label">Inserted Springs</span>
+                            <span class="spring-count-badge" id="springCountBadge">0</span>
+                        </div>
+
+                        <div class="spring-summary-bar" id="springSummaryBar"></div>
+
+                        <div class="spring-search-wrap">
+                            <svg class="spring-search-icon" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="M21 21l-4.35-4.35" />
+                            </svg>
+                            <input type="text" id="springSearchInput" class="spring-search-input"
+                                placeholder="Search tag, type, line..." autocomplete="off">
+                            <button class="spring-search-clear" id="springSearchClear" title="Clear search">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="spring-list" id="springList">
+                            <div class="spring-list-empty" id="springListEmpty">
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.5">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 8v4M12 16h.01" />
+                                </svg>
+                                <span>No springs added yet</span>
+                            </div>
+                        </div>
+
+                        <div class="spring-action-btns">
+                            <button class="spring-action-btn" id="saveSpringsCsvBtn" title="Download as Excel">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                                Save Excel
+                            </button>
+                            <button class="spring-action-btn spring-action-btn-gold" id="copyAllTagsBtn"
+                                title="Copy all tags">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" />
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                </svg>
+                                Copy Tags
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <div class="context-footer">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path
+                                d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                        </svg>
+                        <span>Spring 2025</span>
+                    </div>
+                </div>
+            </aside>
+
+
+            <!-- ══════════════════════════════════════
+         MAIN CONTENT: FORM (LEFT) + IMAGE (RIGHT)
+    ═══════════════════════════════════════ -->
+            <div class="main-body" id="mainBody">
+
+                <!-- FORM COLUMN -->
+                <section class="form-col">
+
+                    <!-- Page header -->
+                    <div class="form-page-header">
+                        <div
+                            style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                            <div>
+                                <p class="form-eyebrow">Spring Schedule Management System</p>
+                                <h1 class="form-heading">Spring Entry Form</h1>
+                            </div>
+                            <p class="form-subheading" style="margin:0;max-width:340px;text-align:right;">Complete all
+                                28 fields to register a new spring.</p>
+                        </div>
+                    </div>
+
+                    <!-- COPY SOURCE BANNER — shown when user copies a spring -->
+                    <div class="copy-source-banner hidden" id="copySourceBanner">
+                        <div class="csb-left">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" />
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                            </svg>
+                            <div class="csb-text">
+                                <span class="csb-label">Copying from</span>
+                                <span class="csb-tag" id="copySourceTag">—</span>
+                            </div>
+                        </div>
+                        <div class="csb-right">
+                            <div class="csb-new-tag-wrap">
+                                <span class="csb-new-label">New tag will be</span>
+                                <span class="csb-new-tag" id="copyNewTag">—</span>
+                            </div>
+                            <button type="button" class="csb-dismiss" id="copyBannerDismiss" title="Cancel copy mode">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- UNIFIED FORM -->
+                    <form id="masterForm">
+
+                        <!-- ─── SECTION A: PIPING DETAILS ─── -->
+                        <div class="form-section" id="sectionPiping">
+                            <div class="form-section-header">
+                                <div class="form-section-indicator"></div>
+                                <div>
+                                    <h2 class="form-section-title">Piping Details</h2>
+                                    <p class="form-section-sub">Line identification and pipe specifications</p>
+                                </div>
+                            </div>
+
+                            <!-- Row 1: Line ID · Stress System · Subline -->
+                            <div class="field-row cols-3" style="margin-top:12px;">
+                                <div class="field-group">
+                                    <label for="dia"><span class="field-num">01</span>Line ID <span
+                                            class="req-star">*</span></label>
+                                    <div class="combobox-wrap" id="diaComboWrap">
+                                        <input type="text" id="dia" class="combobox-input" placeholder="Type or select…"
+                                            autocomplete="off" required>
+                                        <button type="button" class="combobox-toggle" id="diaToggle" tabindex="-1">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2.5">
+                                                <polyline points="6 9 12 15 18 9" />
+                                            </svg>
+                                        </button>
+                                        <div class="combobox-dropdown" id="diaDropdown"></div>
+                                    </div>
+                                </div>
+                                <div class="field-group">
+                                    <label for="stressSystem"><span class="field-num">02</span>Stress Critical
+                                        Sys.</label>
+                                    <input type="text" id="stressSystem" readonly placeholder="Auto-filled">
+                                </div>
+                                <div class="field-group">
+                                    <label for="subline"><span class="field-num">03</span>Subline <span
+                                            class="req-star">*</span></label>
+                                    <input type="text" id="subline" placeholder="e.g. 01" required>
+                                </div>
+                            </div>
+
+                            <!-- Row 2: Area · Piping Class · Line Size -->
+                            <div class="field-row cols-3">
+                                <div class="field-group">
+                                    <label for="area"><span class="field-num">04</span>Area/ Zone No. <span
+                                            class="req-star">*</span></label>
+                                    <input type="text" id="area" placeholder="e.g. A" required>
+                                </div>
+                                <div class="field-group">
+                                    <label for="pipingclass"><span class="field-num">05</span>Piping Spec <span
+                                            class="req-star">*</span></label>
+                                    <input type="text" id="pipingclass" placeholder="e.g. A1A" required>
+                                </div>
+                                <div class="field-group">
+                                    <label for="lineSize"><span class="field-num">06</span>Line Size <span
+                                            class="req-star">*</span></label>
+                                    <input type="text" id="lineSize" placeholder="e.g. 6 inch" required>
+                                </div>
+                            </div>
+
+                            <!-- Row 3: Line Schedule · Insulation · Insulation Thickness · Design Temp -->
+                            <div class="field-row cols-4">
+                                <div class="field-group">
+                                    <label for="lineSchedule"><span class="field-num">07</span>Line Schedule <span
+                                            class="req-star">*</span></label>
+                                    <input type="text" id="lineSchedule" placeholder="e.g. SCH 40" required>
+                                </div>
+                                <div class="field-group">
+                                    <label for="insulation"><span class="field-num">08</span>Insulation <span
+                                            class="req-star">*</span></label>
+                                    <input type="text" id="insulation" placeholder="e.g. HOT / NONE" required>
+                                </div>
+                                <div class="field-group">
+                                    <label for="insulationThickness"><span class="field-num">09</span>Ins.
+                                        Thickness</label>
+                                    <div class="input-unit-wrap">
+                                        <input type="text" id="insulationThickness" placeholder="e.g. 50">
+                                        <span class="unit-tag">MM</span>
+                                    </div>
+                                </div>
+                                <div class="field-group">
+                                    <label for="designtemp"><span class="field-num">10</span>Design Temp. <span
+                                            class="req-star">*</span></label>
+                                    <input type="text" id="designtemp" placeholder="e.g. 150 °C" required>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!-- ─── SECTION B: SPRING ARRANGEMENT ─── -->
+                        <div class="form-section" id="sectionSpring">
+                            <div class="form-section-header">
+                                <div class="form-section-indicator"></div>
+                                <div>
+                                    <h2 class="form-section-title">Spring Details</h2>
+                                    <p class="form-section-sub">Arrangement, dimensions, movement &amp; loads</p>
+                                </div>
+                            </div>
+
+                            <!-- Row 1 (4-col): Type · Figure · Qty · Node No -->
+                            <div class="field-row cols-4" style="margin-top:12px;">
+                                <div class="field-group">
+                                    <label for="springType"><span class="field-num">11</span>Spring Type <span
+                                            class="req-star">*</span></label>
+                                    <div class="select-wrapper">
+                                        <select id="springType" name="springType" required>
+                                            <option value="">— Type —</option>
+                                            <optgroup label="Constant Spring (CS)">
+                                                <option value="CS1">CS1</option>
+                                                <option value="CS2">CS2</option>
+                                                <option value="CS3">CS3</option>
+                                                <option value="CS4">CS4</option>
+                                            </optgroup>
+                                            <optgroup label="Variable Spring (VS)">
+                                                <option value="VS1">VS1</option>
+                                                <option value="VS2">VS2</option>
+                                                <option value="VS3">VS3</option>
+                                                <option value="VS4">VS4</option>
+                                                <option value="VS5">VS5</option>
+                                            </optgroup>
+                                        </select>
+                                        <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2.5">
+                                            <polyline points="6 9 12 15 18 9" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="field-group">
+                                    <label for="figure"><span class="field-num">12</span>Figure No. <span
+                                            class="req-star">*</span></label>
+                                    <div class="select-wrapper">
+                                        <select id="figure" name="figure" required>
+                                            <option value="">— Fig —</option>
+                                            <option value="1">Figure 1</option>
+                                            <option value="2">Figure 2</option>
+                                            <option value="3">Figure 3</option>
+                                            <option value="4">Figure 4</option>
+                                        </select>
+                                        <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2.5">
+                                            <polyline points="6 9 12 15 18 9" />
+                                        </svg>
+                                    </div>
+                                    <span class="dim-caution hidden" id="cautionFigure">
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2.5">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path d="M12 8v4M12 16h.01" />
+                                        </svg>
+                                        Figure 1 not allowed for CS4/VS4 at ≥ 204 °C
+                                    </span>
+                                </div>
+                                <div class="field-group">
+                                    <label for="quantity"><span class="field-num">13</span>Quantity <span
+                                            class="req-star">*</span></label>
+                                    <input type="number" id="quantity" placeholder="e.g. 2" min="1" required>
+                                </div>
+                                <div class="field-group">
+                                    <label for="nodeNo"><span class="field-num">14</span>Node No. <span
+                                            class="req-star">*</span></label>
+                                    <input type="text" id="nodeNo" placeholder="e.g. N-101" required>
+                                </div>
+                            </div>
+
+                            <!-- ─── Pipe at Spring Location ─── -->
+                            <div class="section-divider pipe-loc-divider">
+                                <span>Pipe size, schedule and material at Spring Location</span>
+                                <div class="plt-group" id="pipeLocGroup">
+                                    <button type="button" class="plt-btn active" id="pltMain">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2.5">
+                                            <path d="M5 12h14" />
+                                            <circle cx="5" cy="12" r="2" />
+                                            <circle cx="19" cy="12" r="2" />
+                                        </svg>
+                                        Main Line
+                                    </button>
+                                    <button type="button" class="plt-btn mode-dummy" id="pltDummy">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <path
+                                                d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                                        </svg>
+                                        Dummy Pipe
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Row: Pipe Size · Pipe Schedule · Dummy Material -->
+                            <div class="field-row cols-3">
+                                <div class="field-group" id="pipeSizeGroup">
+                                    <label for="pipeSizeAtSpring"><span class="field-num">15</span>Pipe Size at Spring
+                                        Location <span class="req-star">*</span></label>
+                                    <input type="text" id="pipeSizeAtSpring" placeholder="Auto-filled from Line Size"
+                                        readonly required>
+                                </div>
+                                <div class="field-group" id="pipeSchGroup">
+                                    <label for="pipeSchAtSpring"><span class="field-num">16</span>Schedule at Spring
+                                        Location<span class="req-star">*</span></label>
+                                    <input type="text" id="pipeSchAtSpring" placeholder="Auto-filled from Line Schedule"
+                                        readonly required>
+                                </div>
+                                <div class="field-group" id="dummyMatGroup">
+                                    <label for="dummyMaterial"><span class="field-num">17</span>Material at spring
+                                        location <span class="req-star">*</span></label>
+                                    <div class="combobox-wrap" id="matComboWrap">
+                                        <input type="text" id="dummyMaterial" class="combobox-input"
+                                            placeholder="Type to search…" autocomplete="off">
+                                        <button type="button" class="combobox-toggle" id="matToggle" tabindex="-1">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2.5">
+                                                <polyline points="6 9 12 15 18 9" />
+                                            </svg>
+                                        </button>
+                                        <div class="combobox-dropdown" id="matDropdown"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section-divider"><span>Dimensions &amp; Travel</span></div>
+
+                            <!-- Row 2 (3-col): Dimension · Travel UP · Travel DOWN -->
+                            <div class="field-row cols-3">
+                                <div class="field-group">
+                                    <label for="dimension"><span class="field-num">18</span>Dimension (C or L) <span
+                                            class="req-star">*</span></label>
+                                    <div class="input-unit-wrap">
+                                        <input type="number" id="dimension" placeholder="e.g. 100" step="10" required>
+                                        <span class="unit-tag">MM</span>
+                                    </div>
+                                    <span class="dim-caution hidden" id="cautionDimension">
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2.5">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path d="M12 8v4M12 16h.01" />
+                                        </svg>
+                                        Must be a multiple of 10 mm
+                                    </span>
+                                </div>
+                                <div class="field-group" id="travelUpGroup">
+                                    <label for="travelUp"><span class="field-num">19</span>Travel Op. Temp — UP <span
+                                            class="req-star">*</span></label>
+                                    <div class="input-unit-wrap">
+                                        <input type="number" id="travelUp" placeholder="0" step="0.1">
+                                        <span class="unit-tag">MM</span>
+                                    </div>
+                                </div>
+                                <div class="field-group" id="travelDownGroup">
+                                    <label for="travelDown"><span class="field-num">20</span>Travel Op. Temp — DOWN
+                                        <span class="req-star">*</span></label>
+                                    <div class="input-unit-wrap">
+                                        <input type="number" id="travelDown" placeholder="0" step="0.1">
+                                        <span class="unit-tag">MM</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 3 (4-col): Max Vert UP · Max Vert DOWN · Horiz Axial · Horiz Transverse -->
+                            <div class="field-row cols-4">
+                                <div class="field-group">
+                                    <label for="maxVertUp"><span class="field-num">21</span>Max Vert. — UP <span
+                                            class="req-star">*</span></label>
+                                    <div class="input-unit-wrap">
+                                        <input type="number" id="maxVertUp" placeholder="0" step="0.1" required>
+                                        <span class="unit-tag">MM</span>
+                                    </div>
+                                    <span class="dim-caution hidden" id="cautionMaxUp">
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2.5">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path d="M12 8v4M12 16h.01" />
+                                        </svg>
+                                        Min. 5 mm required
+                                    </span>
+                                </div>
+                                <div class="field-group">
+                                    <label for="maxVertDown"><span class="field-num">22</span>Max Vert. — DOWN <span
+                                            class="req-star">*</span></label>
+                                    <div class="input-unit-wrap">
+                                        <input type="number" id="maxVertDown" placeholder="0" step="0.1" required>
+                                        <span class="unit-tag">MM</span>
+                                    </div>
+                                    <span class="dim-caution hidden" id="cautionMaxDown">
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2.5">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path d="M12 8v4M12 16h.01" />
+                                        </svg>
+                                        Min. 5 mm required
+                                    </span>
+                                </div>
+                                <div class="field-group">
+                                    <label for="horizAxial"><span class="field-num">23</span>Horiz. — AXIAL <span class="req-star">*</span></label>
+                                    <div class="input-unit-wrap">
+                                        <input type="number" id="horizAxial" placeholder="0" step="0.1" required>
+                                        <span class="unit-tag">MM</span>
+                                    </div>
+                                </div>
+                                <div class="field-group">
+                                    <label for="horizTransverse"><span class="field-num">24</span>Horiz. —
+                                        TRANSVERSE <span class="req-star">*</span></label>
+                                    <div class="input-unit-wrap">
+                                        <input type="number" id="horizTransverse" placeholder="0" step="0.1" required>
+                                        <span class="unit-tag">MM</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section-divider"><span>Load Parameters</span></div>
+
+                            <!-- Row 4 (2-col): Op Load · Hydro Load -->
+                            <div class="field-row">
+                                <div class="field-group">
+                                    <label for="operatingLoad"><span class="field-num">25</span>Operating Load <span
+                                            class="req-star">*</span></label>
+                                    <div class="input-unit-wrap">
+                                        <input type="number" id="operatingLoad" placeholder="0" required>
+                                        <span class="unit-tag">KG</span>
+                                    </div>
+                                </div>
+                                <div class="field-group">
+                                    <label for="hydroLoad"><span class="field-num">26</span>Hydro Test Load</label>
+                                    <div class="input-unit-wrap">
+                                        <input type="number" id="hydroLoad" placeholder="Leave blank if N/A">
+                                        <span class="unit-tag">KG</span>
+                                    </div>
+                                    <span class="dim-caution hidden" id="cautionHydroLoad">
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2.5">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path d="M12 8v4M12 16h.01" />
+                                        </svg>
+                                        Enter only if hydro load &gt; 2× operating load
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Row: Spring Tag · Remarks (merged) -->
+                            <div class="field-row">
+                                <div class="field-group">
+                                    <label for="springTag"><span class="field-num">27</span>Spring Tag <span
+                                            class="auto-badge">Auto-generated</span></label>
+                                    <div class="tag-input-wrap">
+                                        <input type="text" id="springTag" readonly
+                                            placeholder="Fill arrangement fields above to generate">
+                                        <button type="button" class="copy-btn" id="copyBtn" title="Copy tag">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2">
+                                                <rect x="9" y="9" width="13" height="13" rx="2" />
+                                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="field-group">
+                                    <label for="remarks"><span class="field-num">28</span>Remarks</label>
+                                    <textarea id="remarks" class="remarks-input" rows="2"
+                                        placeholder="Notes, observations…"></textarea>
+                                </div>
+                            </div>
+
+
+                            <!-- ─── SPRING EVALUATION ─── -->
+                            <div class="section-divider"><span>Spring Evaluation</span></div>
+                            <div class="spring-evaluator" id="springEvaluator">
+                                <div class="eval-summary-row">
+                                    <div class="eval-summary-item">
+                                        <span class="eval-lbl">Operating Load</span>
+                                        <span class="eval-val" id="evalOpLoad">—</span>
+                                    </div>
+                                    <div class="eval-summary-item">
+                                        <span class="eval-lbl">Travel</span>
+                                        <span class="eval-val" id="evalTravel">—</span>
+                                    </div>
+                                    <div class="eval-summary-item">
+                                        <span class="eval-lbl">Direction</span>
+                                        <span class="eval-direction" id="evalDirection">—</span>
+                                    </div>
+                                </div>
+
+                                <div class="eval-slider-row">
+                                    <span class="eval-slider-label">Load Variation</span>
+                                    <div class="eval-slider-wrap">
+                                        <span class="eval-range-edge">0%</span>
+                                        <input type="range" id="evalSlider" min="0" max="15" step="1" value="15" class="eval-slider">
+                                        <span class="eval-range-edge">15%</span>
+                                    </div>
+                                    <span class="eval-slider-val" id="evalSliderVal">15%</span>
+                                </div>
+
+                                <div class="eval-error" id="evalError" style="display:none;"></div>
+
+                                <div class="eval-results" id="evalResults" style="display:none;">
+                                    <div class="eval-result-item">
+                                        <span class="eval-result-lbl">Preset Load</span>
+                                        <span class="eval-result-val" id="evalPresetLoad">—</span>
+                                    </div>
+                                    <div class="eval-result-item">
+                                        <span class="eval-result-lbl">Stiffness</span>
+                                        <span class="eval-result-val" id="evalStiffness">—</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ─── FORM ACTIONS ─── -->
+                            <div class="form-actions-bar">
+                                <button type="button" class="btn-secondary" id="resetFormBtn">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <polyline points="1 4 1 10 7 10" />
+                                        <path d="M3.51 15a9 9 0 1 0 .49-3.45" />
+                                    </svg>
+                                    Reset Form
+                                </button>
+
+                                <div class="form-actions-right">
+
+                                    <button type="submit" class="btn-primary" id="saveSpringBtn">
+                                        <span>Save Spring</span>
+                                    </button>
+
+                                    <button type="button" class="btn-danger" id="submitFinalBtn">
+                                        Submit
+                                    </button>
+
+                                </div>
+                            </div>
+
+                    </form>
+
+                </section><!-- /form-col -->
+
+
+                <!-- IMAGE PANEL (right, sticky) -->
+                <aside class="image-panel" id="imagePanel">
+
+                    <!-- ✅ ADD THIS (bring-back button) -->
+                    <button class="ip-collapsed-tab" id="imagePanelExpand">
+                        <span>Preview</span>
+                    </button>
+
+                    <div class="image-panel-inner">
+
+                        <!-- Header info -->
+                        <div class="ip-header">
+                            <button class="ip-toggle-btn" id="imagePanelToggle" title="Collapse panel">
+                                <svg class="ip-toggle-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2.5">
+                                    <polyline points="9 18 15 12 9 6" />
+                                </svg>
+                            </button>
+                            <span class="ip-eyebrow">Arrangement Preview</span>
+                            <div class="ip-type" id="arrPreviewType">—</div>
+                            <div class="ip-figure" id="arrPreviewFigure">Select type &amp; figure</div>
+                            <div class="ip-badges">
+                                <span class="ip-badge" id="arrTagTypeCode">—</span>
+                                <span class="ip-badge ip-badge-sage" id="arrTagGroup">—</span>
+                            </div>
+                        </div>
+
+                        <!-- Image -->
+                        <div class="ip-image-wrap">
+                            <img id="springImage" src="" alt="Spring Arrangement" class="ip-img hidden">
+                            <div class="ip-placeholder" id="previewPlaceholder">
+                                ...
+                            </div>
+                        </div>
+
+                        <!-- 3D Spring Viewer -->
+                        <div class="ip-3d-section">
+                            <div class="ip-3d-header">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                                </svg>
+                                <span>3D Preview</span>
+                                <span id="angleInfo" class="ip-angle-badge"></span>
+                            </div>
+                            <div id="threeContainer" class="ip-3d-canvas"></div>
+                            <div id="angleWarning" class="ip-angle-warning"></div>
+                        </div>
+
+                        <!-- Footer hint -->
+                        <div class="ip-footer">
+                            ...
+                        </div>
+
+                    </div>
+                </aside>
+
+            </div><!-- /main-body -->
+
+            <!-- ══════════════════════════════════════
+                 VIEW SPRINGS PANEL (shown when View Springs tab active)
+            ═══════════════════════════════════════ -->
+            <div class="vs-panel" id="viewSpringsPanel" style="display:none;">
+
+                <div class="vs-panel-header">
+                    <div class="vs-panel-title-wrap">
+                        <h2 class="vs-panel-title">Spring Schedule</h2>
+                        <p class="vs-panel-sub">Job <strong id="vsPanelJob">—</strong> &nbsp;·&nbsp; Unit <strong
+                                id="vsPanelUnit">—</strong></p>
+                    </div>
+                    <div class="vs-header-actions">
+                        <span class="vs-count-badge" id="vsCountBadge">0 springs</span>
+                        <button class="vs-upload-btn" id="vsUploadMrBtn"
+                            title="Upload MR/Order Excel to update MR No & Order Status">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                            Upload MR Excel
+                        </button>
+                        <input type="file" id="mrExcelFileInput" accept=".xlsx,.xls" style="display:none;">
+                        <button class="vs-refresh-btn" id="vsRefreshBtn">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.2">
+                                <polyline points="23 4 23 10 17 10" />
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                            </svg>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Aggregate-mode banner — shown when the selected unit is a master unit -->
+                <div class="le-aggregate-banner hidden" id="vsAggregateBanner">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><path d="M2 21v-2a4 4 0 0 1 4-4h2"/><path d="M14 21v-2a4 4 0 0 1 4-4h2"/></svg>
+                    <span>Viewing combined data — Master <strong id="vsAggMasterUnit"></strong> (<span id="vsAggMembers"></span>)</span>
+                </div>
+
+                <div class="vs-table-wrap">
+                    <table class="vs-table">
+                        <thead>
+                            <tr>
+                                <th class="vs-th-num">#</th>
+                                <th>Tag</th>
+                                <th>Line ID</th>
+                                <th>Unit</th>
+                                <th>Area</th>
+                                <th>Type / Fig / Qty</th>
+                                <th>Dim (MM)</th>
+                                <th>Stress System No</th>
+                                <th>Status</th>
+                                <th>MR No</th>
+                                <th>Order Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vsTableBody">
+                            <tr class="vs-empty-row" id="vsTableEmpty">
+                                <td colspan="12">
+                                    <div class="vs-empty-state">
+                                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.4">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path d="M12 8v4M12 16h.01" />
+                                        </svg>
+                                        <span>No springs found for this Job / Unit</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div><!-- /vs-panel -->
+
+        </main>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         VENDOR / ORDER DATA MODAL
+    ═══════════════════════════════════════ -->
+    <div class="vd-backdrop" id="vendorModal" style="display:none;">
+        <div class="vd-box">
+            <div class="vd-header">
+                <div>
+                    <h3 class="vd-title">Vendor &amp; Order Data</h3>
+                    <p class="vd-tag-label" id="vdModalTag">—</p>
+                </div>
+                <button class="vd-close" id="vdModalClose" title="Close">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <form id="vendorDataForm" autocomplete="off">
+                <input type="hidden" id="vdSpringId">
+                <input type="hidden" id="vdRecordId">
+                <div class="vd-form-grid">
+                    <div class="vd-field">
+                        <label for="vdVendorName">Vendor Name</label>
+                        <input type="text" id="vdVendorName" placeholder="e.g. ABC Springs Pvt. Ltd.">
+                    </div>
+                    <div class="vd-field">
+                        <label for="vdPoNo">PO No.</label>
+                        <input type="text" id="vdPoNo" placeholder="e.g. PO-2024-0123">
+                    </div>
+                    <div class="vd-field">
+                        <label for="vdPoDate">PO Date</label>
+                        <input type="date" id="vdPoDate">
+                    </div>
+                    <div class="vd-field vd-field-full">
+                        <label for="vdSpringDesignation">Vendor's Spring Designation (Note 6)</label>
+                        <input type="text" id="vdSpringDesignation" placeholder="Vendor spring designation">
+                    </div>
+                    <div class="vd-field">
+                        <label for="vdSpringConstant">Spring Constant — KG/MM (Note 6)</label>
+                        <input type="text" id="vdSpringConstant" placeholder="e.g. 12.5">
+                    </div>
+                    <div class="vd-field">
+                        <label for="vdPresetLoad">Preset Load — KG (Note 6)</label>
+                        <input type="text" id="vdPresetLoad" placeholder="e.g. 450">
+                    </div>
+                    <div class="vd-field">
+                        <label for="vdLoadVariation">% Load Variation (Note 3, 6 &amp; 7)</label>
+                        <input type="text" id="vdLoadVariation" placeholder="e.g. ±5%">
+                    </div>
+                    <div class="vd-field vd-field-full">
+                        <label for="vdRemarks">Remarks</label>
+                        <textarea id="vdRemarks" rows="2" placeholder="Any additional order notes..."></textarea>
+                    </div>
+                </div>
+                <div class="vd-form-footer">
+                    <button type="button" id="vdCancelBtn" class="vd-btn-cancel">Cancel</button>
+                    <button type="submit" class="vd-btn-save">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- IMAGE PANEL COLLAPSED TAB -->
+    <button class="ip-collapsed-tab hidden" id="imagePanelTab" title="Expand preview panel">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="15 18 9 12 15 6" />
+        </svg>
+        <span>Preview</span>
+    </button>
+
+    <!-- SPRING VIEW MODAL (eye button) -->
+    <div class="svm-backdrop hidden" id="springViewModal">
+        <div class="svm-box">
+            <div class="svm-header">
+                <div class="svm-header-left">
+                    <span class="svm-eyebrow">Spring Record</span>
+                    <h2 class="svm-tag-title" id="svmTag">—</h2>
+                </div>
+                <div class="svm-header-right">
+                    <span class="svm-status-badge" id="svmStatusBadge">—</span>
+                    <button class="svm-close-btn" id="svmClose">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="svm-body">
+                <div class="svm-section">
+                    <div class="svm-section-label">Piping Details</div>
+                    <div class="svm-grid" id="svmPipingGrid"></div>
+                </div>
+                <div class="svm-section">
+                    <div class="svm-section-label">Spring Details</div>
+                    <div class="svm-grid" id="svmSpringGrid"></div>
+                </div>
+            </div>
+            <div class="svm-meta-row">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                </svg>
+                <span class="svm-meta-label">Added By</span>
+                <span class="svm-meta-value" id="svmCreatedBy">—</span>
+            </div>
+            <div class="svm-remarks-row" id="svmRemarksRow">
+                <div class="svm-remarks-icon">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                </div>
+                <div class="svm-remarks-content">
+                    <span class="svm-remarks-label">Remarks</span>
+                    <p class="svm-remarks-text" id="svmRemarksText"></p>
+                </div>
+            </div>
+
+            <div class="svm-img-row">
+                <img id="svmImage" src="" alt="Spring Arrangement" class="svm-img hidden">
+                <div class="svm-img-placeholder" id="svmImgPlaceholder">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <path d="M21 15l-5-5L5 21" />
+                    </svg>
+                    <span>No image available</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LINE HISTORY DRAWER -->
+    <div class="line-history-drawer" id="lineHistoryDrawer">
+        <div class="line-history-inner">
+            <div class="line-history-head">
+                <div class="line-history-title">
+                    <div class="review-step-dot done" style="width:8px;height:8px;"></div>
+                    Springs on this Line
+                </div>
+                <button class="line-history-close" id="lineHistoryClose">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="line-history-meta" id="lineHistoryMeta">Select a Line ID to see history</div>
+            <div class="line-history-list" id="lineHistoryList">
+                <div class="line-history-empty" id="lineHistoryEmpty">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.5">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 8v4M12 16h.01" />
+                    </svg>
+                    <span>No springs found for this line</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="line-history-trigger" id="lineHistoryTrigger" title="View springs on selected line">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+        </svg>
+        <span>Line History</span>
+        <span class="trigger-count" id="triggerCount">0</span>
+    </button>
+
+
+    <!-- DASHBOARD -->
+    <div id="dashboardSection" style="display:none; padding:20px;">
+        <h2>📊 Dashboard</h2>
+        <div class="dashboard-cards">
+            <div class="card">
+                <h3>Total Springs</h3>
+                <p id="totalSprings">0</p>
+            </div>
+            <div class="card">
+                <h3>Total Lines</h3>
+                <p id="totalLines">0</p>
+            </div>
+            <div class="card">
+                <h3>CSH Springs</h3>
+                <p id="cshCount">0</p>
+            </div>
+            <div class="card">
+                <h3>VSH Springs</h3>
+                <p id="vshCount">0</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="submitConfirmModal" class="confirm-modal">
+        <div class="confirm-box">
+            <div class="confirm-icon-wrap">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 8v4M12 16h.01" />
+                </svg>
+            </div>
+            <h3 class="confirm-heading">Confirm Submission</h3>
+            <p class="confirm-text">Are you sure you want to submit this spring?<br>
+                <strong>This action cannot be undone.</strong>
+            </p>
+            <div class="confirm-actions">
+                <button id="cancelSubmitBtn" class="btn-secondary">Cancel</button>
+                <button id="confirmSubmitBtn" class="btn-danger">Submit</button>
+            </div>
+        </div>
+    </div>
+    <!-- NOTES DRAWER -->
+    <div class="notes-drawer" id="notesDrawer">
+        <div class="notes-inner">
+
+            <!-- Header -->
+            <div class="notes-head">
+                <div class="notes-head-left">
+                    <div class="review-step-dot done" style="width:8px;height:8px;flex-shrink:0;"></div>
+                    Notes &amp; References
+                </div>
+                <button class="notes-close" id="notesClose" title="Close">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="notes-tabs">
+                <button class="notes-tab active" id="notesTabStd" onclick="switchNotesTab('std')">Standard
+                    Notes</button>
+                <button class="notes-tab" id="notesTabCustom" onclick="switchNotesTab('custom')">Custom Notes</button>
+            </div>
+
+            <!-- ── Standard Notes Pane ── -->
+            <div class="notes-pane" id="notesPaneStd">
+                <div class="notes-abbr-box">
+                    <div class="notes-abbr-title">Abbreviations</div>
+                    <div class="notes-abbr-row">
+                        <span class="notes-abbr-code">CS</span>
+                        <span class="notes-abbr-def">Constant Spring Support</span>
+                    </div>
+                    <div class="notes-abbr-row">
+                        <span class="notes-abbr-code">VS</span>
+                        <span class="notes-abbr-def">Variable Spring Support</span>
+                    </div>
+                </div>
+                <div class="notes-std-label">Standard Notes</div>
+                <ol class="notes-std-list" id="notesStdList"></ol>
+            </div>
+
+            <!-- ── Custom Notes Pane ── -->
+            <div class="notes-pane hidden-pane" id="notesPaneCustom">
+                <div class="notes-add-wrap">
+                    <textarea id="noteAddInput" class="notes-textarea" rows="3"
+                        placeholder="Add a note for this Job / Unit…"></textarea>
+                    <button type="button" id="noteAddBtn" class="notes-add-btn">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        Add Note
+                    </button>
+                </div>
+                <div class="notes-custom-list" id="notesCustomList">
+                    <div class="notes-custom-empty" id="notesCustomEmpty">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 8v4M12 16h.01" />
+                        </svg>
+                        <span>No custom notes yet</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         SPRING DETAIL MODAL
+    ══════════════════════════════════════════════════ -->
+    <div class="sdetail-overlay" id="springDetailOverlay">
+        <div class="sdetail-modal">
+            <div class="sdetail-header">
+                <div class="sdetail-header-left">
+                    <span class="sdetail-tag" id="sdetailTag"></span>
+                    <span class="sdetail-type-badge" id="sdetailTypeBadge"></span>
+                </div>
+                <div class="sdetail-nav">
+                    <button class="sdetail-nav-btn" id="sdetailPrev" title="Previous spring (←)">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <polyline points="15 18 9 12 15 6" />
+                        </svg>
+                    </button>
+                    <span class="sdetail-nav-pos" id="sdetailNavPos">1 / 1</span>
+                    <button class="sdetail-nav-btn" id="sdetailNext" title="Next spring (→)">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                    </button>
+                </div>
+                <button class="sdetail-close" id="sdetailClose" title="Close (Esc)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="sdetail-body" id="sdetailBody"></div>
+            <div class="sdetail-footer">
+                <button class="sdetail-action-btn sdetail-edit-btn" id="sdetailEditBtn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                    Edit Spring
+                </button>
+                <button class="sdetail-action-btn sdetail-print-btn" id="sdetailPrintBtn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <polyline points="6 9 6 2 18 2 18 9" />
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                        <rect x="6" y="14" width="12" height="8" />
+                    </svg>
+                    Export PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+    <!-- ADD this instead -->
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- CHANGE PASSWORD MODAL -->
+    <div class="cpw-backdrop" id="changePwdOverlay" style="display:none;">
+        <div class="cpw-box">
+            <div class="cpw-header">
+                <h3 class="cpw-title">Change Password</h3>
+                <button class="cpw-close" id="cpwClose" title="Close">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="cpw-body">
+                <div class="cpw-field">
+                    <label class="cpw-label">Current Password</label>
+                    <input class="cpw-input" type="password" id="cpwCurrent" placeholder="Enter current password">
+                </div>
+                <div class="cpw-field">
+                    <label class="cpw-label">New Password</label>
+                    <input class="cpw-input" type="password" id="cpwNew" placeholder="Enter new password">
+                </div>
+                <div class="cpw-field">
+                    <label class="cpw-label">Confirm New Password</label>
+                    <input class="cpw-input" type="password" id="cpwConfirm" placeholder="Confirm new password">
+                </div>
+            </div>
+            <div class="cpw-error" id="cpwError"></div>
+            <div class="cpw-footer">
+                <button class="cpw-btn cpw-cancel" id="cpwCancel">Cancel</button>
+                <button class="cpw-btn cpw-save" id="cpwSave">Update Password</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="JS/details.js"></script>
+    <script src="JS/change-password.js"></script>
+</body>
+
+</html>

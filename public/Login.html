@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSMS — Spring Schedule Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="CSS/styles1.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<header class="navbar">
+    <div class="navbar-brand">
+        <div class="logo-circle"><img src="Assets/eilround.gif" alt="SSMS" class="logo-img"></div>
+        <span class="brand-name">SSMS</span>
+    </div>
+    <nav>
+        <ul class="nav-links">
+            <li><a href="#">Home</a></li>
+            <li><a href="#">Projects</a></li>
+            <li><a href="#">Contact</a></li>
+        </ul>
+    </nav>
+</header>
+
+<!-- MAIN -->
+<div class="page-wrapper">
+
+    <!-- LEFT: HERO -->
+    <div class="hero-panel">
+
+        <!-- Background: facility/site photo fills the entire panel -->
+        <div class="hero-bg" style="background-image: url('Assets/221004970803_20201112121151.jpg');"></div>
+        <div class="hero-overlay"></div>
+        <div class="hero-deco"></div>
+
+        <!-- Floating product image: spring component, anchored top-right -->
+        <div class="hero-product-wrap">
+            <img
+                src="Assets/Heavy-Duty-Red-Ext.-Spring.png"
+                alt="Heavy Duty Red Extension Spring"
+                class="hero-product-img"
+            >
+            <div class="hero-product-badge">Featured Component</div>
+        </div>
+
+        <div class="hero-content">
+            <div class="hero-tag">
+                <div class="hero-tag-dot"></div>
+                <span>Now in Season</span>
+            </div>
+
+            <h1 class="hero-title">
+                Spring <em>Schedule</em><br>
+                Management<br>
+                System
+            </h1>
+
+            <div class="hero-divider"></div>
+
+            <p class="hero-subtitle">
+                Seamlessly plan, track, and manage your spring data with precision.
+            </p>
+
+        </div>
+    </div>
+
+    <!-- RIGHT: LOGIN -->
+    <div class="login-panel">
+        <div class="login-form-wrapper">
+            <p class="login-eyebrow">Welcome back</p>
+            <h2 class="login-heading">Log in</h2>
+            <p class="login-subheading">Access your schedule dashboard</p>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="userid">User ID</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="userid" placeholder="Enter your Employee ID" required>
+                        <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="password" placeholder="Enter your timesheet Password" required>
+                        <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <button type="submit" class="login-btn">
+                    <span>Sign In →</span>
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <p>© 2025 SSMS — Spring Schedule Management System</p>
+            </div>
+        </div>
+
+        <div class="season-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+            <span>Spring 2025</span>
+        </div>
+    </div>
+
+</div>
+
+<!-- SITE FOOTER — full width -->
+<footer class="site-footer">
+    <div class="footer-inner">
+
+        <!-- Left: brand -->
+        <div class="footer-brand">
+            <div class="footer-logo">SS</div>
+            <div class="footer-brand-text">
+                <span class="footer-brand-name">SSMS</span>
+                <span class="footer-copy">© 2025 Spring Schedule Management System</span>
+            </div>
+        </div>
+
+        <!-- Centre: help contacts -->
+        <div class="footer-help">
+            <span class="footer-help-label">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 16.92V19a2 2 0 0 1-2.18 2A19.86 19.86 0 0 1 3 4.18 2 2 0 0 1 5 2h2.09a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                </svg>
+                For Help, Contact
+            </span>
+            <div class="footer-contacts">
+                <div class="footer-contact">
+                    <div class="footer-contact-avatar">SG</div>
+                    <div class="footer-contact-info">
+                        <span class="footer-contact-name">Subhang Gupta</span>
+                        <a class="footer-contact-phone" href="tel:+910000000000">+91 00000 00000</a>
+                    </div>
+                </div>
+                <div class="footer-contact">
+                    <div class="footer-contact-avatar">MS</div>
+                    <div class="footer-contact-info">
+                        <span class="footer-contact-name">Monojit Sarkar</span>
+                        <a class="footer-contact-phone" href="tel:+910000000000">+91 00000 00000</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: system tag -->
+        <div class="footer-meta">
+            <span class="footer-meta-tag">Internal Use Only</span>
+            <div class="footer-meta-dot"></div>
+            <span class="footer-meta-tag">v 1.0</span>
+        </div>
+
+    </div>
+</footer>
+
+<script src="JS/login.js"></script>
+
+</body>
+</html>
