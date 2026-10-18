@@ -2,19 +2,18 @@ const express = require('express');
 const path = require('path');
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
-const { startStressSync } = require('./cron/sync.cron');
-
 const app = express();
 
 app.use(express.json({ limit: '50mb' }));
+app.get('/', (req, res) => res.redirect('/Login.html'));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Routes
-const stressRoutes = require('./routes/stress.routes');
-app.use('/api/stress', stressRoutes);
-
-// Start cron job
-startStressSync();
+// Security: every /api call needs the single sign-on cookie (except login/logout);
+// "who did it" fields are always the signed-in user. See middleware/auth.js.
+// Stress lines are no longer synced — they are read live from PIMS (db/linkPc2.js).
+const { requireAuth, stampIdentity } = require('./middleware/auth');
+app.get('/api/health', (req, res) => res.json({ ok: true }));
+app.use('/api', requireAuth, stampIdentity);
 
 app.listen(process.env.PORT, () => {
     console.log(`Server running on http://localhost:${process.env.PORT}`);
@@ -39,6 +38,7 @@ app.use('/api/auth', authRoutes);
 
 app.use('/api/master', masterRoutes);
 app.use('/api/spring', springRoutes);
+app.use('/api/team', require('./routes/team.routes'));
 
 const notesRoutes = require('./routes/notes.routes');
 app.use('/api/notes', notesRoutes);
@@ -56,9 +56,6 @@ pool.query(`CREATE TABLE IF NOT EXISTS spring_notes (
 pool.query(`ALTER TABLE spring_details ADD COLUMN IF NOT EXISTS mr_no VARCHAR(100) DEFAULT ''`)
     .catch(err => console.error('Migration error (mr_no):', err.message));
 
-pool.query(`ALTER TABLE user_assignments ADD COLUMN IF NOT EXISTS password VARCHAR(200) DEFAULT NULL`)
-    .then(() => pool.query(`UPDATE user_assignments SET password = employee_id WHERE password IS NULL`))
-    .catch(err => console.error('Migration error (user password):', err.message));
 pool.query(`ALTER TABLE spring_details ADD COLUMN IF NOT EXISTS order_status VARCHAR(50) DEFAULT 'Not Ordered'`)
     .catch(err => console.error('Migration error (order_status):', err.message));
 pool.query(`ALTER TABLE spring_notes ADD COLUMN IF NOT EXISTS note_number INTEGER DEFAULT 0`)
@@ -122,16 +119,6 @@ pool.query(`ALTER TABLE spring_vendor_data ADD COLUMN IF NOT EXISTS preset_load 
     .catch(err => console.error('Migration error (preset_load):', err.message));
 pool.query(`ALTER TABLE spring_vendor_data ADD COLUMN IF NOT EXISTS load_variation VARCHAR(100) DEFAULT ''`)
     .catch(err => console.error('Migration error (load_variation):', err.message));
-
-pool.query(`CREATE TABLE IF NOT EXISTS unit_master_map (
-  id              SERIAL PRIMARY KEY,
-  job_no          VARCHAR(50)  NOT NULL,
-  unit_no         VARCHAR(50)  NOT NULL,
-  master_unit_no  VARCHAR(50)  NOT NULL,
-  created_by      VARCHAR(100) DEFAULT '',
-  created_at      TIMESTAMP    DEFAULT NOW(),
-  UNIQUE(job_no, unit_no)
-)`).catch(err => console.error('Migration error (unit_master_map):', err.message));
 
 pool.query(`CREATE TABLE IF NOT EXISTS spring_bid_data (
   id                   SERIAL PRIMARY KEY,

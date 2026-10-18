@@ -1,20 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/db');
-const pimsPool = require('../db/pims-db');
-const { getGroupMembers, getMasterFor, isMasterUnit, getMastersForJob } = require('../utils/unitGroups');
+const { ROLES, requireUnitRole, requireJobRole } = require('../middleware/auth');
+const { getGroupMembers, isMasterUnit } = require('../utils/unitGroups');
 
 /* =====================================================
-   1. GET JOB NUMBERS
+   1. GET JOB NUMBERS — active PIMS jobs where the user has an SSMS role
    ===================================================== */
 router.get('/jobs', async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT DISTINCT job_no FROM stress_lines ORDER BY job_no`
+            `SELECT DISTINCT p.job_no, p.job_name
+             FROM pims_projects p
+             JOIN effective_assignments e ON e.job_no = p.job_no
+             WHERE upper(e.employee_id) = upper($1)
+             ORDER BY p.job_no`,
+            [req.user.employeeId]
         );
-
         res.json({ ok: true, data: result.rows });
-
     } catch (err) {
         console.error(err);
         res.status(500).json({ ok: false, error: err.message });
@@ -23,49 +26,22 @@ router.get('/jobs', async (req, res) => {
 
 
 /* =====================================================
-   2. GET UNIT NUMBERS BY JOB
+   2. GET UNITS BY JOB — PIMS master units only (with their member units).
+      Any role on the job may list them.
    ===================================================== */
-router.get('/units', async (req, res) => {
+router.get('/units', requireJobRole(ROLES.READ), async (req, res) => {
     try {
-        const { jobNo, includeMasters } = req.query;
-
-        if (!jobNo) {
-            return res.status(400).json({ ok: false, error: 'jobNo is required' });
-        }
-
-        // A unit counts as "real" for this job if it has critical-line data,
-        // or at least one person is formally assigned to work in it — covers
-        // offsite units that exist (and have JEs/LEs assigned) but haven't had
-        // PIMS data synced yet.
         const result = await pool.query(
-            `SELECT DISTINCT unit_no FROM (
-                SELECT unit_no FROM stress_lines WHERE job_no = $1
-                UNION
-                SELECT unit_no FROM user_assignments WHERE job_no = $1
-            ) combined
-            ORDER BY unit_no`,
-            [jobNo]
+            `SELECT m.unit_no, m.unit_name, true AS is_master,
+                    ARRAY(SELECT c.unit_no FROM pims_units c
+                          WHERE c.job_no = m.job_no AND c.master_unit = m.unit_no
+                          ORDER BY c.unit_no) AS master_members
+             FROM pims_units m
+             WHERE m.job_no = $1 AND m.is_master
+             ORDER BY m.unit_no`,
+            [req.query.jobNo]
         );
-
-        // Opt-in only (Dashboard's unrestricted selector) — the Unit Groups admin
-        // member picker must NOT see this, to avoid nesting a master inside another group.
-        if (includeMasters === 'true') {
-            const masters = await getMastersForJob(jobNo);
-            const existing = new Set(result.rows.map(r => r.unit_no));
-            masters.forEach(m => {
-                if (!existing.has(m.unit_no)) {
-                    result.rows.push({ unit_no: m.unit_no, is_master: true, master_members: m.members });
-                } else {
-                    const row = result.rows.find(r => r.unit_no === m.unit_no);
-                    row.is_master = true;
-                    row.master_members = m.members;
-                }
-            });
-            result.rows.sort((a, b) => a.unit_no.localeCompare(b.unit_no));
-        }
-
         res.json({ ok: true, data: result.rows });
-
     } catch (err) {
         console.error(err);
         res.status(500).json({ ok: false, error: err.message });
@@ -76,7 +52,7 @@ router.get('/units', async (req, res) => {
 /* =====================================================
    3. GET STRESS LINES (CORE API)
    ===================================================== */
-router.get('/stress-lines', async (req, res) => {
+router.get('/stress-lines', requireUnitRole(ROLES.READ), async (req, res) => {
     try {
         const { jobNo, unitNo, aggregate } = req.query;
 
@@ -114,36 +90,8 @@ router.get('/stress-lines', async (req, res) => {
             )
         ]);
 
-        // Live pull from PIMS — zone suffix (e.g. -A, -B) is preserved as it is meaningful
-        let pimsRows = [];
-        try {
-            const pimsRes = await pimsPool.query(
-                `SELECT TRIM(line_no) AS line_id, stress_system, unit_no
-                 FROM drawings
-                 WHERE stress_critical = 'Y'
-                   AND job_no = $1
-                   AND ${unitFilterSql}
-                   AND line_no IS NOT NULL
-                 ORDER BY line_no`,
-                [jobNo, unitParam]
-            );
-            pimsRows = pimsRes.rows;
-        } catch (pimsErr) {
-            console.error('[PIMS live query failed, using local only]', pimsErr.message);
-        }
-
-        // Merge: local rows take priority; PIMS adds any lines not yet in local
-        const seenLocal = new Set(
-            localCriticalRes.rows.map(r => `${r.unit_no}|${r.line_id}`)
-        );
-        const pimsOnly = pimsRows.filter(
-            r => r.line_id && !seenLocal.has(`${r.unit_no}|${r.line_id}`)
-        );
-
-        const criticalRows = [
-            ...localCriticalRes.rows,
-            ...pimsOnly
-        ].sort((a, b) => (a.line_id || '').localeCompare(b.line_id || ''));
+        // Critical lines come live from PIMS (stress_lines is a view of cmp_pims_1014)
+        const criticalRows = localCriticalRes.rows;
 
         const data = [
             ...criticalRows.map(r => ({ ...r, is_critical: true })),
@@ -173,7 +121,7 @@ router.get('/stress-lines', async (req, res) => {
    ===================================================== */
 
 // List all groupings for a job: [{ master_unit_no, members: [...] }]
-router.get('/unit-groups', async (req, res) => {
+router.get('/unit-groups', requireJobRole(ROLES.READ), async (req, res) => {
     try {
         const { jobNo } = req.query;
         if (!jobNo) {
@@ -197,70 +145,11 @@ router.get('/unit-groups', async (req, res) => {
     }
 });
 
-// Create / replace a grouping — memberUnitNos should include the master itself
-router.post('/unit-groups', async (req, res) => {
-    try {
-        const { jobNo, masterUnitNo, memberUnitNos, createdBy } = req.body;
-
-        if (!jobNo || !masterUnitNo || !Array.isArray(memberUnitNos) || memberUnitNos.length === 0) {
-            return res.status(400).json({ ok: false, error: 'jobNo, masterUnitNo and memberUnitNos[] are required' });
-        }
-
-        const members = Array.from(new Set([...memberUnitNos, masterUnitNo]));
-
-        await pool.query('BEGIN');
-        try {
-            // Clear out the master's previous member list
-            await pool.query(
-                `DELETE FROM unit_master_map WHERE job_no = $1 AND master_unit_no = $2`,
-                [jobNo, masterUnitNo]
-            );
-
-            for (const unitNo of members) {
-                await pool.query(
-                    `INSERT INTO unit_master_map (job_no, unit_no, master_unit_no, created_by)
-                     VALUES ($1,$2,$3,$4)
-                     ON CONFLICT (job_no, unit_no)
-                     DO UPDATE SET master_unit_no = EXCLUDED.master_unit_no, created_by = EXCLUDED.created_by`,
-                    [jobNo, unitNo, masterUnitNo, createdBy || '']
-                );
-            }
-
-            await pool.query('COMMIT');
-        } catch (err) {
-            await pool.query('ROLLBACK');
-            throw err;
-        }
-
-        res.json({ ok: true });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ ok: false, error: err.message });
-    }
-});
-
-// Dissolve a grouping — its members revert to standalone
-router.delete('/unit-groups/:masterUnitNo', async (req, res) => {
-    try {
-        const { masterUnitNo } = req.params;
-        const { jobNo } = req.query;
-        if (!jobNo) {
-            return res.status(400).json({ ok: false, error: 'jobNo is required' });
-        }
-
-        await pool.query(
-            `DELETE FROM unit_master_map WHERE job_no = $1 AND master_unit_no = $2`,
-            [jobNo, masterUnitNo]
-        );
-
-        res.json({ ok: true });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ ok: false, error: err.message });
-    }
-});
+// Groupings are PIMS parent units now — maintained in PIMS, read-only here.
+const managedInPims = (req, res) =>
+    res.status(403).json({ ok: false, error: 'Unit groups are managed in PIMS (parent unit). Please change them there.' });
+router.post('/unit-groups', managedInPims);
+router.delete('/unit-groups/:masterUnitNo', managedInPims);
 
 /* =====================================================
    5. NON-CRITICAL LINES
@@ -268,7 +157,7 @@ router.delete('/unit-groups/:masterUnitNo', async (req, res) => {
 
 // Check whether a line_id already exists elsewhere in the SAME job
 // (outside the units already searched), in either critical or non-critical data.
-router.get('/line-lookup', async (req, res) => {
+router.get('/line-lookup', requireJobRole(ROLES.READ), async (req, res) => {
     try {
         const { jobNo, lineId, excludeUnits } = req.query;
         if (!jobNo || !lineId) {
@@ -313,7 +202,7 @@ function embeddedUnitOf(lineId) {
     return /^\d{2,4}$/.test(seg) ? seg : null;
 }
 
-router.post('/non-critical-lines', async (req, res) => {
+router.post('/non-critical-lines', requireUnitRole(ROLES.EDIT), async (req, res) => {
     try {
         const { jobNo, unitNo, lineId, stressSystem, createdBy, force } = req.body;
         if (!jobNo || !unitNo || !lineId) {
@@ -356,13 +245,13 @@ router.post('/non-critical-lines', async (req, res) => {
 });
 
 /* =====================================================
-   6. LINE SPEC FROM PIMS linelist_lines
+   6. LINE SPEC FROM THE PIMS LINE LIST (view pims_line_list)
    Live lookup by line ID — returns piping spec, size,
    insulation, insulation thickness, design temp.
    ===================================================== */
 router.get('/line-spec', async (req, res) => {
     try {
-        const { lineId } = req.query;
+        const { lineId, jobNo } = req.query;
         if (!lineId) return res.status(400).json({ ok: false, error: 'lineId is required' });
 
         // Strip trailing zone suffix: CL-101-02404-A → CL-101-02404
@@ -381,19 +270,13 @@ router.get('/line-spec', async (req, res) => {
         const unit    = parts[firstDigitIdx];
         const lineNo  = parts[parts.length - 1];   // last segment
 
-        const result = await pimsPool.query(
-            `SELECT DISTINCT
-                 line_class          AS piping_class,
-                 line_size,
-                 insulation,
-                 insulation_thickness,
-                 design_temp
-             FROM linelist_lines
-             WHERE service  = $1
-               AND SPLIT_PART(unit_no, ' ', 1) = $2
-               AND line_no  = $3
+        const result = await pool.query(
+            `SELECT piping_class, line_size, insulation, insulation_thickness, design_temp
+             FROM pims_line_list
+             WHERE service = $1 AND unit_no = $2 AND line_no = $3
+               AND ($4::text IS NULL OR job_no = $4)
              LIMIT 1`,
-            [service, unit, lineNo]
+            [service, unit, lineNo, jobNo || null]
         );
 
         res.json({ ok: true, data: result.rows[0] || null });

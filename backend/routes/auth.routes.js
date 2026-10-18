@@ -1,103 +1,52 @@
+// Sign-in for SSMS — one account for every module (eil_employees on PC-2) and the
+// shared single sign-on cookie. Roles come from effective_assignments (services/liveUser).
 const express = require('express');
 const router = express.Router();
-const pool = require('../db/db');
-const { getAugmentedAssignments } = require('../utils/unitGroups');
+const sso = require('../utils/sso');
+const { checkCredentials, getAssignments } = require('../services/liveUser');
+
+const NO_ACCESS = 'You have no SSMS role yet. Ask your Group Leader to add you to a job.';
 
 router.post('/login', async (req, res) => {
     try {
-        const { employee_id, password } = req.body;
-
+        const { employee_id, password } = req.body || {};
         if (!employee_id || !password) {
-            return res.json({ ok: false, error: "Employee ID and password required" });
+            return res.json({ ok: false, error: 'Employee ID and password required' });
         }
+        const id = await checkCredentials(String(employee_id).trim(), String(password));
+        if (!id) return res.json({ ok: false, error: 'Invalid Employee ID or password' });
 
-        const result = await pool.query(
-            `SELECT ua.*, me.employee_name
-             FROM user_assignments ua
-             LEFT JOIN master_employees me ON ua.employee_id = me.employee_id
-             WHERE ua.employee_id = $1`,
-            [employee_id]
-        );
+        const assignments = await getAssignments(id);
+        if (!assignments.length) return res.status(403).json({ ok: false, error: NO_ACCESS });
 
-        if (result.rows.length === 0) {
-            return res.json({ ok: false, error: "Invalid Employee ID or password" });
-        }
-
-        const storedPassword = result.rows[0].password;
-
-        if (!storedPassword || storedPassword !== password) {
-            return res.json({ ok: false, error: "Invalid Employee ID or password" });
-        }
-
-        const augmented = await getAugmentedAssignments(result.rows);
-
-        return res.json({
-            ok: true,
-            data: augmented
-        });
-
+        sso.setCookie(res, id);
+        return res.json({ ok: true, data: assignments });
     } catch (err) {
-        console.error(err);
-        return res.status(500).json({ ok: false, error: "Server error" });
+        console.error('login:', err.message);
+        return res.status(503).json({ ok: false, error: 'Employee server (PC-2) is unreachable. Please try again shortly.' });
     }
 });
 
-// Re-fetch this employee's assignments (including any newly created master
-// units) without requiring a fresh login.
+router.post('/logout', (req, res) => {
+    sso.clearCookie(res);
+    res.json({ ok: true });
+});
+
+// The signed-in user's current assignments. Also used by the login page to pick up an
+// existing single sign-on session (signed in through ePULSE / MRCS).
 router.get('/assignments', async (req, res) => {
     try {
-        const { employee_id } = req.query;
-        if (!employee_id) {
-            return res.status(400).json({ ok: false, error: 'employee_id is required' });
-        }
-
-        const result = await pool.query(
-            `SELECT ua.*, me.employee_name
-             FROM user_assignments ua
-             LEFT JOIN master_employees me ON ua.employee_id = me.employee_id
-             WHERE ua.employee_id = $1`,
-            [employee_id]
-        );
-
-        const augmented = await getAugmentedAssignments(result.rows);
-        res.json({ ok: true, data: augmented });
-
+        const assignments = await getAssignments(req.user.employeeId);
+        if (!assignments.length) return res.status(403).json({ ok: false, error: NO_ACCESS });
+        res.json({ ok: true, data: assignments, user: req.user });
     } catch (err) {
-        console.error(err);
+        console.error('assignments:', err.message);
         res.status(500).json({ ok: false, error: err.message });
     }
 });
 
-router.put('/change-password', async (req, res) => {
-    try {
-        const { employee_id, currentPassword, newPassword } = req.body;
-        if (!employee_id || !currentPassword || !newPassword) {
-            return res.json({ ok: false, error: 'All fields are required' });
-        }
-        if (newPassword.length < 4) {
-            return res.json({ ok: false, error: 'New password must be at least 4 characters' });
-        }
-
-        const result = await pool.query(
-            'SELECT password FROM user_assignments WHERE employee_id = $1',
-            [employee_id]
-        );
-        if (result.rows.length === 0) {
-            return res.json({ ok: false, error: 'User not found' });
-        }
-        if (result.rows[0].password !== currentPassword) {
-            return res.json({ ok: false, error: 'Current password is incorrect' });
-        }
-
-        await pool.query(
-            'UPDATE user_assignments SET password = $1 WHERE employee_id = $2',
-            [newPassword, employee_id]
-        );
-        return res.json({ ok: true });
-    } catch (err) {
-        console.error(err);
-        return res.status(500).json({ ok: false, error: 'Server error' });
-    }
+router.put('/change-password', (req, res) => {
+    res.status(403).json({ ok: false, error: 'Passwords are managed centrally (one account for all modules). Please contact ITS.' });
 });
 
 module.exports = router;

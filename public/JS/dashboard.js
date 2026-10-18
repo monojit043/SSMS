@@ -54,6 +54,10 @@
         if (quickLeBtn) quickLeBtn.style.display = "none";
     }
 
+    // Team page — for anyone who is LE or GL on some unit
+    const teamLink = document.getElementById("teamLink");
+    if (teamLink && assignments.some(a => a.role === "GL" || a.role === "LE")) teamLink.style.display = "";
+
     // Logout
     document.getElementById("logoutBtn").addEventListener("click", () => {
         localStorage.clear();

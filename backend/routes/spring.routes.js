@@ -2,12 +2,20 @@ const express = require('express');
 const router  = express.Router();
 const pool    = require('../db/db');
 const xlsx    = require('xlsx-js-style');
-const { getGroupMembers, getMasterFor, isMasterUnit } = require('../utils/unitGroups');
+const { getGroupMembers, getMasterFor, isMasterUnit, expandUnits } = require('../utils/unitGroups');
+const {
+    ROLES, requireUnitRole, requireJobRole, requireSpringRole, requireSpringsRole, requireScopeRole, requireTagsRole,
+} = require('../middleware/auth');
+
+// Who may do what (see middleware/auth.js): READ = JE/LE/GL/MAT, EDIT = JE/LE/GL,
+// REVIEW = LE/GL, MR = LE/GL/MAT, MAT = MAT/GL. Always checked on the job + master unit.
+const vendorSpringId = async (req) =>
+    (await pool.query('SELECT spring_id FROM spring_vendor_data WHERE id = $1', [req.params.id])).rows[0]?.spring_id ?? 0;   // 0 → "Spring not found"
 
 /* =====================================================
    4. SAVE SPRING DATA
    ===================================================== */
-router.post('/save', async (req, res) => {
+router.post('/save', requireUnitRole(ROLES.EDIT), async (req, res) => {
     try {
         const {
             jobNo,
@@ -85,7 +93,7 @@ router.post('/save', async (req, res) => {
     }
 });
 
-router.post('/piping/save', async (req, res) => {
+router.post('/piping/save', requireUnitRole(ROLES.EDIT), async (req, res) => {
     try {
         const {
             jobNo,
@@ -124,13 +132,13 @@ router.post('/piping/save', async (req, res) => {
     }
 });
 
-router.get('/list', async (req, res) => {
+router.get('/list', requireScopeRole(ROLES.READ), async (req, res) => {
     try {
         const { jobNo, unitNo, unitNos, createdBy, status, excludeStatus, aggregate } = req.query;
 
         // Multi-unit mode (MAT role)
         if (jobNo && unitNos) {
-            const units = unitNos.split(',').map(u => u.trim()).filter(Boolean);
+            const units = await expandUnits(jobNo, unitNos.split(',').map(u => u.trim()).filter(Boolean));
             let q = `SELECT sd.*, COALESCE(b.bid_count,0)::int AS bid_count
                      FROM spring_details sd
                      LEFT JOIN (SELECT spring_tag, COUNT(*) AS bid_count FROM spring_bid_data GROUP BY spring_tag) b
@@ -198,7 +206,7 @@ router.get('/list', async (req, res) => {
     }
 });
 
-router.get('/next-tag', async (req, res) => {
+router.get('/next-tag', requireUnitRole(ROLES.EDIT), async (req, res) => {
     try {
         const { jobNo, unitNo, springType } = req.query;
 
@@ -255,7 +263,7 @@ router.get('/next-tag', async (req, res) => {
     }
 });
 
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', requireSpringRole(ROLES.EDIT), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -272,7 +280,7 @@ router.delete('/delete/:id', async (req, res) => {
     }
 });
 
-router.put('/update/:id', async (req, res) => {
+router.put('/update/:id', requireSpringRole(ROLES.EDIT), async (req, res) => {
     try {
         const { id } = req.params;
         const data = req.body;
@@ -359,7 +367,7 @@ router.put('/update/:id', async (req, res) => {
     }
 });
 
-router.get('/analytics', async (req, res) => {
+router.get('/analytics', requireUnitRole(ROLES.READ), async (req, res) => {
     try {
         const { jobNo, unitNo, createdBy, aggregate } = req.query;
 
@@ -453,7 +461,7 @@ router.get('/analytics', async (req, res) => {
     }
 });
 
-router.get('/dashboard', async (req, res) => {
+router.get('/dashboard', requireUnitRole(ROLES.READ), async (req, res) => {
     try {
         const { jobNo, unitNo } = req.query;
 
@@ -476,7 +484,7 @@ router.get('/dashboard', async (req, res) => {
     }
 });
 
-router.put('/submit/:id', async (req, res) => {
+router.put('/submit/:id', requireSpringRole(ROLES.EDIT), async (req, res) => {
     try {
         await pool.query(
             `UPDATE spring_details 
@@ -493,16 +501,29 @@ router.put('/submit/:id', async (req, res) => {
     }
 });
 
+// Submitted springs awaiting review — only on units where the signed-in user is LE / GL
 router.get('/submitted', async (req, res) => {
-    const result = await pool.query(
-        `SELECT * FROM spring_details 
-         WHERE status = 'submitted'
-         ORDER BY line_id`
-    );
-    res.json({ ok: true, data: result.rows });
+    try {
+        const result = await pool.query(
+            `SELECT sd.* FROM spring_details sd
+             WHERE sd.status = 'submitted'
+               AND EXISTS (
+                   SELECT 1 FROM effective_assignments e
+                   WHERE upper(e.employee_id) = upper($1) AND e.role IN ('LE', 'GL')
+                     AND e.job_no = sd.job_no
+                     AND e.unit_no = COALESCE((SELECT pu.master_unit FROM pims_units pu
+                                               WHERE pu.job_no = sd.job_no AND pu.unit_no = sd.unit_no), sd.unit_no))
+             ORDER BY sd.line_id`,
+            [req.user.employeeId]
+        );
+        res.json({ ok: true, data: result.rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
 });
 
-router.put('/approve/:id', async (req, res) => {
+router.put('/approve/:id', requireSpringRole(ROLES.REVIEW), async (req, res) => {
     try {
         const { reviewed_by, remarks } = req.body;
         await pool.query(
@@ -520,7 +541,7 @@ router.put('/approve/:id', async (req, res) => {
     }
 });
 
-router.put('/reject/:id', async (req, res) => {
+router.put('/reject/:id', requireSpringRole(ROLES.REVIEW), async (req, res) => {
     try {
         const { reviewed_by, remarks } = req.body;
         const mrCheck = await pool.query(`SELECT mr_no FROM spring_details WHERE id = $1`, [req.params.id]);
@@ -543,7 +564,7 @@ router.put('/reject/:id', async (req, res) => {
 });
 
 
-router.put('/disapprove/:id', async (req, res) => {
+router.put('/disapprove/:id', requireSpringRole(ROLES.REVIEW), async (req, res) => {
     try {
         const { reviewed_by } = req.body;
         const check = await pool.query(
@@ -568,7 +589,7 @@ router.put('/disapprove/:id', async (req, res) => {
     }
 });
 
-router.get('/export', async (req, res) => {
+router.get('/export', requireScopeRole(ROLES.READ), async (req, res) => {
     try {
         const { jobNo, unitNo, aggregate } = req.query;
 
@@ -651,7 +672,7 @@ router.get('/export', async (req, res) => {
     }
 });
 
-router.get('/export-eil', async (req, res) => {
+router.get('/export-eil', requireScopeRole(ROLES.READ), async (req, res) => {
     try {
         const { jobNo, unitNo, unitNos, aggregate, springTags, mrNo } = req.query;
 
@@ -660,7 +681,7 @@ router.get('/export-eil', async (req, res) => {
         let aggregated = false;
         if (jobNo && unitNos) {
             // MAT multi-unit export
-            const units = unitNos.split(',').map(u => u.trim()).filter(Boolean);
+            const units = await expandUnits(jobNo, unitNos.split(',').map(u => u.trim()).filter(Boolean));
             where += ` AND sd.job_no = $1 AND sd.unit_no = ANY($2::text[])`;
             params.push(jobNo, units);
             aggregated = units.length > 1;
@@ -1035,14 +1056,14 @@ router.get('/export-eil', async (req, res) => {
 /* ═══════════════════════════════════════════════════════════════
    EXPORT ALL SPRINGS  (all statuses, colour-coded)
 ═══════════════════════════════════════════════════════════════ */
-router.get('/export-all', async (req, res) => {
+router.get('/export-all', requireScopeRole(ROLES.READ), async (req, res) => {
     try {
         const { jobNo, unitNo, unitNos, createdBy, aggregate } = req.query;
         const params = [];
         let where = 'WHERE 1=1';
         if (jobNo && unitNos) {
             // MAT multi-unit export
-            const units = unitNos.split(',').map(u => u.trim()).filter(Boolean);
+            const units = await expandUnits(jobNo, unitNos.split(',').map(u => u.trim()).filter(Boolean));
             where += ' AND job_no = $1 AND unit_no = ANY($2::text[])';
             params.push(jobNo, units);
         } else if (jobNo && unitNo) {
@@ -1209,7 +1230,7 @@ router.get('/export-all', async (req, res) => {
     }
 });
 
-router.put('/bulk-approve', async (req, res) => {
+router.put('/bulk-approve', requireSpringsRole(ROLES.REVIEW), async (req, res) => {
     try {
         const { ids, reviewed_by } = req.body;
 
@@ -1235,7 +1256,7 @@ router.put('/bulk-approve', async (req, res) => {
 
 /* ── MR / Order Status Excel Upload ──────────────── */
 
-router.post('/upload-mr-excel', async (req, res) => {
+router.post('/upload-mr-excel', requireUnitRole(ROLES.MR), async (req, res) => {
     try {
         const { jobNo, unitNo, fileBase64 } = req.body;
         if (!jobNo || !unitNo || !fileBase64) {
@@ -1316,7 +1337,7 @@ router.post('/upload-mr-excel', async (req, res) => {
 
 /* ── Assign MR number (MAT selective export) ─────── */
 
-router.patch('/assign-mr', async (req, res) => {
+router.patch('/assign-mr', requireTagsRole(ROLES.MR, req => req.body?.springTags), async (req, res) => {
     try {
         const { springTags, mrNo } = req.body;
         if (!mrNo || !Array.isArray(springTags) || springTags.length === 0) {
@@ -1337,7 +1358,7 @@ router.patch('/assign-mr', async (req, res) => {
 
 /* ── Drop springs from MR (non-bid re-assignment) ─── */
 
-router.patch('/drop-mr', async (req, res) => {
+router.patch('/drop-mr', requireTagsRole(ROLES.MR, req => req.body?.springTags), async (req, res) => {
     try {
         const { springTags } = req.body;
         if (!Array.isArray(springTags) || springTags.length === 0) {
@@ -1357,7 +1378,7 @@ router.patch('/drop-mr', async (req, res) => {
 
 /* ── MR Index ─────────────────────────────────────── */
 
-router.get('/mr-index', async (req, res) => {
+router.get('/mr-index', requireJobRole(ROLES.READ), async (req, res) => {
     try {
         const { jobNo } = req.query;
         if (!jobNo) return res.status(400).json({ ok: false, error: 'jobNo required' });
@@ -1392,7 +1413,7 @@ router.get('/mr-index', async (req, res) => {
 
 /* ── Bid Upload (Excel from vendor) ──────────────── */
 
-router.post('/upload-bid', async (req, res) => {
+router.post('/upload-bid', requireJobRole(ROLES.MAT), async (req, res) => {
     try {
         const { vendorName, jobNo, fileBase64 } = req.body;
         if (!vendorName || !jobNo || !fileBase64) {
@@ -1449,7 +1470,7 @@ router.post('/upload-bid', async (req, res) => {
     }
 });
 
-router.get('/bid-data', async (req, res) => {
+router.get('/bid-data', requireTagsRole(ROLES.READ, req => [req.query.springTag]), async (req, res) => {
     try {
         const { springTag, jobNo } = req.query;
         if (!springTag) return res.status(400).json({ ok: false, error: 'springTag required' });
@@ -1475,7 +1496,7 @@ router.get('/bid-data', async (req, res) => {
 
 /* ── Vendor Data ─────────────────────────────────── */
 
-router.get('/vendor-data/:springId', async (req, res) => {
+router.get('/vendor-data/:springId', requireSpringRole(ROLES.READ, req => req.params.springId), async (req, res) => {
     try {
         const { springId } = req.params;
         const result = await pool.query(
@@ -1489,7 +1510,7 @@ router.get('/vendor-data/:springId', async (req, res) => {
     }
 });
 
-router.post('/vendor-data', async (req, res) => {
+router.post('/vendor-data', requireSpringRole(ROLES.MAT, req => req.body?.springId), async (req, res) => {
     try {
         const { springId, vendorName, poNo, poDate, springDesignation, springConstant, presetLoad, loadVariation, remarks, createdBy } = req.body;
         const result = await pool.query(
@@ -1506,7 +1527,7 @@ router.post('/vendor-data', async (req, res) => {
     }
 });
 
-router.put('/vendor-data/:id', async (req, res) => {
+router.put('/vendor-data/:id', requireSpringRole(ROLES.MAT, vendorSpringId), async (req, res) => {
     try {
         const { id } = req.params;
         const { vendorName, poNo, poDate, springDesignation, springConstant, presetLoad, loadVariation, remarks } = req.body;

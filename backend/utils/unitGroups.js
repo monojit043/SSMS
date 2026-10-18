@@ -47,50 +47,15 @@ async function getMastersForJob(jobNo) {
     return result.rows.map(r => ({ unit_no: r.master_unit_no, members: r.members }));
 }
 
-// Given raw user_assignments rows, adds a synthetic row for any master unit the
-// user qualifies for (has a real assignment to at least one member of that group).
-// Real assignments are never altered; synthetic rows are flagged is_master:true.
-async function getAugmentedAssignments(rawRows) {
-    if (!rawRows.length) return rawRows;
-
-    const jobNos = [...new Set(rawRows.map(r => r.job_no))];
-    const mapResult = await pool.query(
-        `SELECT job_no, unit_no, master_unit_no FROM unit_master_map WHERE job_no = ANY($1::text[])`,
-        [jobNos]
+// Every unit belonging to the groups of the given units (a master expands to all its members).
+async function expandUnits(jobNo, unitNos) {
+    const result = await pool.query(
+        `SELECT DISTINCT m.unit_no FROM unit_master_map m
+         WHERE m.job_no = $1 AND m.master_unit_no IN (
+             SELECT master_unit_no FROM unit_master_map WHERE job_no = $1 AND unit_no = ANY($2::text[]))`,
+        [jobNo, unitNos]
     );
-
-    const unitToMaster = {};     // job_no -> { unit_no -> master_unit_no }
-    const masterToMembers = {};  // job_no -> { master_unit_no -> [unit_no...] }
-
-    mapResult.rows.forEach(r => {
-        unitToMaster[r.job_no] = unitToMaster[r.job_no] || {};
-        unitToMaster[r.job_no][r.unit_no] = r.master_unit_no;
-
-        masterToMembers[r.job_no] = masterToMembers[r.job_no] || {};
-        masterToMembers[r.job_no][r.master_unit_no] = masterToMembers[r.job_no][r.master_unit_no] || [];
-        masterToMembers[r.job_no][r.master_unit_no].push(r.unit_no);
-    });
-
-    const seen = new Set(rawRows.map(r => `${r.job_no}::${r.unit_no}`));
-    const virtualRows = [];
-
-    rawRows.forEach(row => {
-        const masterUnitNo = unitToMaster[row.job_no] && unitToMaster[row.job_no][row.unit_no];
-        if (!masterUnitNo) return;
-
-        const key = `${row.job_no}::${masterUnitNo}`;
-        if (seen.has(key)) return; // already a real assignment, or already added
-        seen.add(key);
-
-        virtualRows.push({
-            ...row,
-            unit_no: masterUnitNo,
-            is_master: true,
-            master_members: masterToMembers[row.job_no][masterUnitNo].slice().sort()
-        });
-    });
-
-    return [...rawRows, ...virtualRows];
+    return [...new Set([...unitNos, ...result.rows.map(r => r.unit_no)])].sort();
 }
 
-module.exports = { getGroupMembers, getMasterFor, isMasterUnit, getMastersForJob, getAugmentedAssignments };
+module.exports = { getGroupMembers, getMasterFor, isMasterUnit, getMastersForJob, expandUnits };

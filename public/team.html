@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSMS — Team</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="CSS/shared-navbar.css">
+    <link rel="stylesheet" href="CSS/dashboard.css">
+    <style>
+        .tm-wrap { max-width: 980px; margin: calc(var(--navbar-h) + 28px) auto 40px; padding: 0 16px; }
+        .tm-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow-card); padding: 22px 24px; margin-bottom: 20px; }
+        .tm-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; color: var(--bark); margin: 0 0 4px; }
+        .tm-sub { color: var(--bark-light); font-size: 13px; margin: 0 0 16px; }
+        .tm-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .tm-row select, .tm-row input { font: inherit; font-size: 14px; padding: 8px 10px; border: 1px solid var(--cream); border-radius: 8px; background: var(--ivory); color: var(--bark); min-width: 0; }
+        .tm-row input { flex: 1 1 220px; }
+        .tm-btn { font: inherit; font-size: 14px; padding: 8px 16px; border: 0; border-radius: 8px; background: var(--sage-deep); color: #fff; cursor: pointer; }
+        .tm-btn:disabled { opacity: .5; cursor: default; }
+        .tm-btn.tm-danger { background: transparent; color: var(--col-rejected); border: 1px solid var(--col-rejected); padding: 4px 10px; font-size: 12px; }
+        table.tm-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .tm-table th { text-align: left; font-weight: 600; color: var(--bark-light); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; padding: 8px 6px; border-bottom: 1px solid var(--cream); }
+        .tm-table td { padding: 9px 6px; border-bottom: 1px solid var(--cream); color: var(--bark); }
+        .tm-role { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: var(--cream); }
+        .tm-src { font-size: 12px; color: var(--bark-light); }
+        .tm-msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+        .tm-msg.err { color: var(--col-rejected); }
+        .tm-msg.ok { color: var(--sage-deep); }
+        .tm-scroll { overflow-x: auto; }
+    </style>
+</head>
+<body>
+
+<header class="db-navbar">
+    <a class="db-brand" href="/dashboard.html">
+        <div class="db-logo"><img src="Assets/eilround.gif" alt="SSMS" class="logo-img"></div>
+        <span class="db-brand-name">SSMS</span>
+    </a>
+    <nav>
+        <ul class="db-nav-links">
+            <li><a href="/dashboard.html">Dashboard</a></li>
+            <li><a href="/team.html" class="nav-active">Team</a></li>
+        </ul>
+    </nav>
+    <div class="db-navbar-right">
+        <span class="db-user-name" id="tmUser">—</span>
+        <button class="tm-btn" id="logoutBtn" style="margin-left:12px">Logout</button>
+    </div>
+</header>
+
+<main class="tm-wrap">
+    <section class="tm-card">
+        <h1 class="tm-title">Team</h1>
+        <p class="tm-sub">GL comes from PIMS. A GL adds LE, JE and MAT; an LE adds JE — people of your own department only.</p>
+        <div class="tm-row">
+            <label for="tmUnit" class="tm-src">Job / unit</label>
+            <select id="tmUnit"></select>
+        </div>
+    </section>
+
+    <section class="tm-card" id="tmAddCard" hidden>
+        <div class="tm-row">
+            <input id="tmPerson" list="tmPeople" placeholder="Search name or employee ID" autocomplete="off">
+            <datalist id="tmPeople"></datalist>
+            <select id="tmRole"></select>
+            <button class="tm-btn" id="tmAdd">Add</button>
+        </div>
+        <div class="tm-msg" id="tmMsg"></div>
+    </section>
+
+    <section class="tm-card">
+        <div class="tm-scroll">
+            <table class="tm-table">
+                <thead><tr><th>Name</th><th>ID</th><th>Role</th><th>Department</th><th>Added by</th><th></th></tr></thead>
+                <tbody id="tmBody"><tr><td colspan="6">Loading…</td></tr></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script src="JS/session.js"></script>
+<script src="JS/team.js"></script>
+</body>
+</html>
