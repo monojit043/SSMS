@@ -579,7 +579,11 @@
                     <button class="row-action-btn row-btn-view" data-id="${s.id}" title="View details">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
-                    ${s.status === 'approved' ? `
+                    ${s.mr_no ? `
+                    <span class="row-mr-lock" title="MR locked — ${escHtml(s.mr_no)}">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </span>
+                    ` : s.status === 'approved' ? `
                     <button class="row-action-btn row-btn-disapprove" data-id="${s.id}" title="Disapprove">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
                     </button>
@@ -614,11 +618,13 @@
 
             // Inline action buttons
             tr.querySelector(".row-btn-view").addEventListener("click", () => openSpringDetail(s));
-            if (s.status === 'approved') {
-                tr.querySelector(".row-btn-disapprove").addEventListener("click", (e) => { e.stopPropagation(); quickAction("disapprove", [s.id]); });
-            } else {
-                tr.querySelector(".row-btn-approve").addEventListener("click", (e) => { e.stopPropagation(); quickAction("approve", [s.id]); });
-                tr.querySelector(".row-btn-reject").addEventListener("click", (e) => { e.stopPropagation(); quickAction("reject", [s.id]); });
+            if (!s.mr_no) {
+                if (s.status === 'approved') {
+                    tr.querySelector(".row-btn-disapprove")?.addEventListener("click", (e) => { e.stopPropagation(); quickAction("disapprove", [s.id]); });
+                } else {
+                    tr.querySelector(".row-btn-approve")?.addEventListener("click", (e) => { e.stopPropagation(); quickAction("approve", [s.id]); });
+                    tr.querySelector(".row-btn-reject")?.addEventListener("click", (e) => { e.stopPropagation(); quickAction("reject", [s.id]); });
+                }
             }
 
             leTableBody.appendChild(tr);
@@ -761,10 +767,27 @@
         }
 
         // Show disapprove button only for approved springs; hide Approve/Reject for approved
+        // If MR is raised, all action buttons are hidden — spring is locked
         const isApproved = s.status === 'approved';
-        sdmApproveBtn.style.display    = isApproved ? 'none' : '';
-        sdmRejectBtn.style.display     = isApproved ? 'none' : '';
-        sdmDisapproveBtn.style.display = isApproved ? '' : 'none';
+        const isMrLocked = !!s.mr_no;
+        sdmApproveBtn.style.display    = (isMrLocked || isApproved)  ? 'none' : '';
+        sdmRejectBtn.style.display     = (isMrLocked || isApproved)  ? 'none' : '';
+        sdmDisapproveBtn.style.display = (isMrLocked || !isApproved) ? 'none' : '';
+
+        // Show MR lock notice in the detail overlay
+        let sdmMrNotice = document.getElementById("sdmMrNotice");
+        if (!sdmMrNotice) {
+            sdmMrNotice = document.createElement("div");
+            sdmMrNotice.id = "sdmMrNotice";
+            sdmMrNotice.className = "sdm-mr-notice";
+            sdmDisapproveBtn.parentNode.insertBefore(sdmMrNotice, sdmDisapproveBtn);
+        }
+        if (isMrLocked) {
+            sdmMrNotice.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> MR raised: <strong>${escHtml(s.mr_no)}</strong> — no further changes allowed.`;
+            sdmMrNotice.style.display = "";
+        } else {
+            sdmMrNotice.style.display = "none";
+        }
 
         springDetailModal.classList.remove("hidden");
         springDetailModal.style.display = "flex";
@@ -1317,15 +1340,19 @@
     ══════════════════════════════════════════ */
 
     window.switchLeSidebarTab = function (tab) {
-        const leContent = document.getElementById("leContent");
-        const leVsPanel = document.getElementById("leViewSpringsPanel");
-        const leUgPanel = document.getElementById("leUnitGroupsPanel");
-        const leTabReview = document.getElementById("leTabReview");
-        const leTabView   = document.getElementById("leTabView");
-        const leTabGroups = document.getElementById("leTabGroups");
+        const leContent    = document.getElementById("leContent");
+        const leVsPanel    = document.getElementById("leViewSpringsPanel");
+        const leUgPanel    = document.getElementById("leUnitGroupsPanel");
+        const leTabReview  = document.getElementById("leTabReview");
+        const leTabView    = document.getElementById("leTabView");
+        const leTabGroups  = document.getElementById("leTabGroups");
         const lePaneReview = document.getElementById("lePaneReview");
         const lePaneView   = document.getElementById("lePaneView");
         const lePaneGroups = document.getElementById("lePaneGroups");
+
+        // Elements toggled between tabs
+        const leTableWrap  = document.getElementById("leTableWrap");
+        const lePagination = document.getElementById("lePagination");
 
         [leTabReview, leTabView, leTabGroups].forEach(t => t && t.classList.remove("active"));
         [lePaneReview, lePaneView, lePaneGroups].forEach(p => p && p.classList.add("le-hidden-pane"));
@@ -1333,14 +1360,35 @@
         leVsPanel.style.display = "none";
         leUgPanel.style.display = "none";
 
+        const lePageHeading    = document.getElementById("lePageHeading");
+        const lePageSubheading = document.getElementById("lePageSubheading");
+        const leHeaderRightReview = document.getElementById("leHeaderRightReview");
+        const leHeaderRightView   = document.getElementById("leHeaderRightView");
+
+        // Reset to review defaults (in case coming from view tab)
+        [leTableWrap, lePagination].forEach(el => { if (el) el.style.display = ""; });
+        if (leVsPanel) leVsPanel.style.display = "none";
+        if (lePageHeading)    lePageHeading.textContent    = "Review & Approval";
+        if (lePageSubheading) lePageSubheading.textContent = "Review submitted spring records and approve or reject.";
+        if (leHeaderRightReview) leHeaderRightReview.style.display = "";
+        if (leHeaderRightView)   leHeaderRightView.style.display   = "none";
+
         if (tab === "review") {
             leTabReview.classList.add("active");
             lePaneReview.classList.remove("le-hidden-pane");
             leContent.style.display = "";
         } else if (tab === "view") {
             leTabView.classList.add("active");
-            lePaneView.classList.remove("le-hidden-pane");
-            leVsPanel.style.display = "";
+            lePaneReview.classList.remove("le-hidden-pane"); // keep stats + filters + bulk actions
+            leContent.style.display = "";                    // keep full header + toolbar + selection bar
+            // Swap heading and right-side actions for View Springs mode
+            if (lePageHeading)    lePageHeading.textContent    = "Spring Schedule";
+            if (lePageSubheading) lePageSubheading.textContent = "All springs for this Job & Unit";
+            if (leHeaderRightReview) leHeaderRightReview.style.display = "none";
+            if (leHeaderRightView)   leHeaderRightView.style.display   = "";
+            // Hide review table/pagination; VS panel appears directly below toolbar
+            [leTableWrap, lePagination].forEach(el => { if (el) el.style.display = "none"; });
+            if (leVsPanel) leVsPanel.style.display = "";
             loadLeViewSpringsTable();
         } else if (tab === "groups") {
             leTabGroups.classList.add("active");

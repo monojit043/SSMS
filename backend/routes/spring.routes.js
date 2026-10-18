@@ -126,7 +126,23 @@ router.post('/piping/save', async (req, res) => {
 
 router.get('/list', async (req, res) => {
     try {
-        const { jobNo, unitNo, createdBy, status, excludeStatus, aggregate } = req.query;
+        const { jobNo, unitNo, unitNos, createdBy, status, excludeStatus, aggregate } = req.query;
+
+        // Multi-unit mode (MAT role)
+        if (jobNo && unitNos) {
+            const units = unitNos.split(',').map(u => u.trim()).filter(Boolean);
+            let q = `SELECT sd.*, COALESCE(b.bid_count,0)::int AS bid_count
+                     FROM spring_details sd
+                     LEFT JOIN (SELECT spring_tag, COUNT(*) AS bid_count FROM spring_bid_data GROUP BY spring_tag) b
+                       ON b.spring_tag = sd.spring_tag
+                     WHERE sd.job_no = $1 AND sd.unit_no = ANY($2::text[])`;
+            const p = [jobNo, units];
+            if (status)        { q += ` AND sd.status = $${p.length + 1}`;  p.push(status); }
+            if (excludeStatus) { q += ` AND sd.status != $${p.length + 1}`; p.push(excludeStatus); }
+            q += ` ORDER BY sd.unit_no, sd.line_id, sd.spring_tag`;
+            const r = await pool.query(q, p);
+            return res.json({ ok: true, data: r.rows, meta: { aggregated: false, members: units } });
+        }
 
         // Aggregate mode (LE Approval / Dashboard only — never requested by JE calls):
         // when the selected unit is a master unit, widen the filter to its whole group.
@@ -140,25 +156,29 @@ router.get('/list', async (req, res) => {
             aggregated    = true;
         }
 
-        let query = `SELECT * FROM spring_details WHERE job_no = $1 AND ${unitFilterSql}`;
+        let query = `SELECT sd.*, COALESCE(b.bid_count,0)::int AS bid_count
+                     FROM spring_details sd
+                     LEFT JOIN (SELECT spring_tag, COUNT(*) AS bid_count FROM spring_bid_data GROUP BY spring_tag) b
+                       ON b.spring_tag = sd.spring_tag
+                     WHERE sd.job_no = $1 AND sd.${unitFilterSql}`;
         const params = [jobNo, unitParam];
 
         if (createdBy) {
-            query += ` AND created_by = $${params.length + 1}`;
+            query += ` AND sd.created_by = $${params.length + 1}`;
             params.push(createdBy);
         }
 
         if (status) {
-            query += ` AND status = $${params.length + 1}`;
+            query += ` AND sd.status = $${params.length + 1}`;
             params.push(status);
         }
 
         if (excludeStatus) {
-            query += ` AND status != $${params.length + 1}`;
+            query += ` AND sd.status != $${params.length + 1}`;
             params.push(excludeStatus);
         }
 
-        query += ` ORDER BY id DESC`;
+        query += ` ORDER BY sd.id DESC`;
 
         const result = await pool.query(query, params);
 
@@ -256,6 +276,11 @@ router.put('/update/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const data = req.body;
+
+        const mrCheck = await pool.query(`SELECT mr_no FROM spring_details WHERE id = $1`, [id]);
+        if (mrCheck.rows.length && mrCheck.rows[0].mr_no) {
+            return res.status(403).json({ ok: false, error: 'Spring is locked — an MR has been raised against it.' });
+        }
 
         await pool.query(
             `UPDATE spring_details SET
@@ -498,6 +523,10 @@ router.put('/approve/:id', async (req, res) => {
 router.put('/reject/:id', async (req, res) => {
     try {
         const { reviewed_by, remarks } = req.body;
+        const mrCheck = await pool.query(`SELECT mr_no FROM spring_details WHERE id = $1`, [req.params.id]);
+        if (mrCheck.rows.length && mrCheck.rows[0].mr_no) {
+            return res.status(403).json({ ok: false, error: 'Spring is locked — an MR has been raised against it.' });
+        }
         await pool.query(
             `UPDATE spring_details
              SET status = 'rejected',
@@ -518,10 +547,11 @@ router.put('/disapprove/:id', async (req, res) => {
     try {
         const { reviewed_by } = req.body;
         const check = await pool.query(
-            `SELECT status FROM spring_details WHERE id = $1`,
+            `SELECT status, mr_no FROM spring_details WHERE id = $1`,
             [req.params.id]
         );
         if (!check.rows.length) return res.status(404).json({ ok: false, error: 'Spring not found' });
+        if (check.rows[0].mr_no) return res.status(403).json({ ok: false, error: 'Spring is locked — an MR has been raised against it.' });
         if (check.rows[0].status !== 'approved') return res.status(400).json({ ok: false, error: 'Only approved springs can be disapproved' });
         await pool.query(
             `UPDATE spring_details
@@ -623,12 +653,18 @@ router.get('/export', async (req, res) => {
 
 router.get('/export-eil', async (req, res) => {
     try {
-        const { jobNo, unitNo, aggregate } = req.query;
+        const { jobNo, unitNo, unitNos, aggregate, springTags, mrNo } = req.query;
 
         let where = `WHERE sd.status = 'approved'`;
         const params = [];
         let aggregated = false;
-        if (jobNo && unitNo) {
+        if (jobNo && unitNos) {
+            // MAT multi-unit export
+            const units = unitNos.split(',').map(u => u.trim()).filter(Boolean);
+            where += ` AND sd.job_no = $1 AND sd.unit_no = ANY($2::text[])`;
+            params.push(jobNo, units);
+            aggregated = units.length > 1;
+        } else if (jobNo && unitNo) {
             if (aggregate === 'true' && await isMasterUnit(jobNo, unitNo)) {
                 aggregated = true;
                 where += ` AND sd.job_no = $1 AND sd.unit_no = ANY($2::text[])`;
@@ -637,6 +673,13 @@ router.get('/export-eil', async (req, res) => {
                 where += ` AND sd.job_no = $1 AND sd.unit_no = $2`;
                 params.push(jobNo, unitNo);
             }
+        }
+
+        // Filter to specific spring tags (MAT selective export)
+        if (springTags) {
+            const tags = springTags.split(',').map(t => t.trim()).filter(Boolean);
+            where += ` AND sd.spring_tag = ANY($${params.length + 1}::text[])`;
+            params.push(tags);
         }
 
         const { rows: springs } = await pool.query(
@@ -723,8 +766,12 @@ router.get('/export-eil', async (req, res) => {
         titleCell.border    = thinBorder;
 
         // Document No. (W1:Z3 merged – same height as spring schedule)
+        // Format: {JOB_NO}-{UNIT_NO}-16-43-DS-{MR_NO}
+        const unitDisplay = unitNo
+            || (unitNos ? unitNos.split(',')[0].trim() : 'XXX');
+        const docNum = `${jobNo || 'XXXX'}-${unitDisplay}-16-43-DS-${mrNo || 'XXXX'}`;
         const docCell = ws.getCell('W1');
-        docCell.value     = 'Document No.\nXXXX-XXX-16-43-DS-XXXX\nRev.  No. X';
+        docCell.value     = `Document No.\n${docNum}\nRev.  No. X`;
         docCell.font      = { bold: true, size: 8, name: 'Arial' };
         docCell.alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
         docCell.border    = thinBorder;
@@ -846,6 +893,9 @@ router.get('/export-eil', async (req, res) => {
            DATA ROWS from row 10
         ══════════════════════════════════════════════ */
         const R0 = 10;
+        let col2MaxLen  = 12; // ITEMCODE — start at current default
+        let col18MaxLen = 16; // LINE NUMBER — start at current default
+        let col19MaxLen = 18; // DUMMY PIPE MATERIAL — start at current default
         springs.forEach((s, idx) => {
             const rowNum   = R0 + idx;
             const pipeInfo = [s.pipe_size_at_spring, s.pipe_sch_at_spring || ''].filter(Boolean).join(' ');
@@ -855,8 +905,14 @@ router.get('/export-eil', async (req, res) => {
             const sublineForLineNo = s.subline && !/^0+$/.test(s.subline.trim()) ? s.subline : null;
 
             const values = [
-                s.mr_no               || '',   // 1  A
-                '',                             // 2  B  ITEMCODE
+                mrNo ? String(idx + 1).padStart(3, '0') : (s.mr_no || ''),  // 1  A
+                (() => {
+                    const parts    = (s.spring_tag || '').split('-');
+                    const tagJob   = parts[0] || jobNo || '';
+                    const tagUnit  = parts[1] || unitDisplay;
+                    const serialNo = parts[parts.length - 1] || '';
+                    return `*${tagJob}${tagUnit}SPG${serialNo}ZZ`;
+                })(),                           // 2  B  ITEMCODE
                 s.spring_tag          || '',   // 3  C
                 s.quantity            ?? '',   // 4  D
                 s.spring_type         || '',   // 5  E
@@ -886,9 +942,17 @@ router.get('/export-eil', async (req, res) => {
                 s.load_variation      || ''    // 26 Z
             ];
 
+            col2MaxLen  = Math.max(col2MaxLen,  String(values[1]).length);
+            col18MaxLen = Math.max(col18MaxLen, String(values[17]).length);
+            col19MaxLen = Math.max(col19MaxLen, String(values[18]).length);
             values.forEach((v, i) => dCell(i + 1, rowNum, v));
             ws.getRow(rowNum).height = 18;
         });
+
+        // Apply content-fitted widths (capped to avoid runaway columns)
+        ws.getColumn(2).width  = Math.min(col2MaxLen  + 3, 35);
+        ws.getColumn(18).width = Math.min(col18MaxLen + 3, 50);
+        ws.getColumn(19).width = Math.min(col19MaxLen + 3, 40);
 
         /* ══════════════════════════════════════════════
            NOTES SECTION
@@ -952,9 +1016,11 @@ router.get('/export-eil', async (req, res) => {
         }
 
         const buf  = await wb.xlsx.writeBuffer();
-        const fname = jobNo && unitNo
-            ? `${jobNo}_${unitNo}_EIL_spring_schedule.xlsx`
-            : 'EIL_spring_schedule.xlsx';
+        const fname = mrNo
+            ? `${mrNo}_EIL_spring_schedule.xlsx`
+            : jobNo && unitNo
+                ? `${jobNo}_${unitNo}_EIL_spring_schedule.xlsx`
+                : 'EIL_spring_schedule.xlsx';
 
         res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -971,10 +1037,15 @@ router.get('/export-eil', async (req, res) => {
 ═══════════════════════════════════════════════════════════════ */
 router.get('/export-all', async (req, res) => {
     try {
-        const { jobNo, unitNo, createdBy, aggregate } = req.query;
+        const { jobNo, unitNo, unitNos, createdBy, aggregate } = req.query;
         const params = [];
         let where = 'WHERE 1=1';
-        if (jobNo && unitNo) {
+        if (jobNo && unitNos) {
+            // MAT multi-unit export
+            const units = unitNos.split(',').map(u => u.trim()).filter(Boolean);
+            where += ' AND job_no = $1 AND unit_no = ANY($2::text[])';
+            params.push(jobNo, units);
+        } else if (jobNo && unitNo) {
             if (aggregate === 'true' && await isMasterUnit(jobNo, unitNo)) {
                 where += ' AND job_no = $1 AND unit_no = ANY($2::text[])';
                 params.push(jobNo, await getGroupMembers(jobNo, unitNo));
@@ -1010,38 +1081,46 @@ router.get('/export-all', async (req, res) => {
             saved:     'FF404040',
         };
 
+        // IPMCS import format — columns in exact order required by the system
         const COLS = [
-            { header: 'STATUS',              key: 'status',               width: 12 },
-            { header: 'SPRING TAG',          key: 'spring_tag',           width: 22 },
-            { header: 'TYPE',                key: 'spring_type',          width: 8  },
-            { header: 'FIG',                 key: 'figure',               width: 6  },
-            { header: 'QTY',                 key: 'quantity',             width: 6  },
-            { header: 'MR NO',               key: 'mr_no',               width: 14 },
-            { header: 'UNIT',                key: 'unit_no',              width: 8  },
-            { header: 'LINE ID',             key: 'line_id',              width: 12 },
-            { header: 'SUBLINE',             key: 'subline',              width: 10 },
-            { header: 'LINE SIZE',           key: 'line_size',            width: 10 },
-            { header: 'AREA',                key: 'area',                 width: 8  },
-            { header: 'PIPE SIZE @SPRING',   key: 'pipe_size_at_spring',  width: 16 },
-            { header: 'PIPE SCH @SPRING',    key: 'pipe_sch_at_spring',   width: 14 },
-            { header: 'DIM C/L (MM)',        key: 'dimension',            width: 12 },
-            { header: 'TRAVEL UP (MM)',      key: 'travel_up',            width: 14 },
-            { header: 'TRAVEL DOWN (MM)',    key: 'travel_down',          width: 15 },
-            { header: 'MAX UP (MM)',         key: 'max_up',               width: 12 },
-            { header: 'MAX DOWN (MM)',       key: 'max_down',             width: 13 },
-            { header: 'HORIZ AXIAL (MM)',    key: 'horiz_axial',          width: 15 },
-            { header: 'HORIZ TRANS (MM)',    key: 'horiz_trans',          width: 15 },
-            { header: 'OP LOAD (KG)',        key: 'operating_load',       width: 13 },
-            { header: 'HYDRO LOAD (KG)',     key: 'hydro_load',           width: 14 },
-            { header: 'INSULATION',          key: 'insulation',           width: 12 },
-            { header: 'INS THICK (MM)',      key: 'insulation_thickness', width: 14 },
-            { header: 'DESIGN TEMP (°C)',    key: 'design_temp',          width: 14 },
-            { header: 'DUMMY PIPE MAT',      key: 'dummy_pipe_material',  width: 16 },
-            { header: 'REMARKS',             key: 'remarks',              width: 22 },
-            { header: 'CREATED BY',          key: 'created_by',           width: 14 },
-            { header: 'REVIEWED BY',         key: 'reviewed_by',          width: 14 },
-            { header: 'REVIEW REMARKS',      key: 'review_remarks',       width: 22 },
-            { header: 'ORDER STATUS',        key: 'order_status',         width: 14 },
+            { header: 'S.NO',                                                          width: 6,  val: (_s, i) => i + 1 },
+            { header: 'MR NO',                                                         width: 14, val: s => s.mr_no               || '' },
+            { header: 'JOB NO',                                                        width: 10, val: s => s.job_no              || '' },
+            { header: 'Contractor Code',                                               width: 14, val: ()  => ''                       },
+            { header: 'DIA XXX',                                                       width: 10, val: s => {
+                if (!s.line_size && s.line_size !== 0) return '';
+                const n = parseFloat(String(s.line_size).replace(/["“”’']/g, '').replace(/\binch(es)?\b/gi, '').trim());
+                return isNaN(n) ? s.line_size : (n % 1 === 0 ? Math.round(n) : n);
+            }},
+            { header: 'Service',                                                       width: 16, val: s => s.stress_system ? s.stress_system.toUpperCase() : '' },
+            { header: 'Unit XXX',                                                      width: 10, val: s => s.unit_no             || '' },
+            { header: 'lsrno',                                                         width: 18, val: s => s.line_id             || '' },
+            { header: 'subline',                                                       width: 10, val: s => s.subline             || '' },
+            { header: 'Piping  Class',                                                 width: 12, val: s => s.piping_class ? s.piping_class.toUpperCase() : '' },
+            { header: 'Insulation',                                                    width: 12, val: s => s.insulation          || '' },
+            { header: 'areano',                                                        width: 8,  val: s => s.area                || '' },
+            { header: 'isosheet',                                                      width: 12, val: ()  => ''                       },
+            { header: 'SPRING Serial NUMBER XXX',                                      width: 20, val: ()  => ''                       },
+            { header: 'SPRING TAG NO.',                                                width: 22, val: s => s.spring_tag          || '' },
+            { header: 'Qty',                                                           width: 6,  val: s => s.quantity            || '' },
+            { header: 'SUPPORT ARRANGEMENT TYPE\n(NOTE-2,5,11, 12) XXX',              width: 22, val: s => s.spring_type         || '' },
+            { header: 'FIG. No.\n(NOTE-2,5,11,12) X',                                 width: 12, val: s => s.figure              || '' },
+            { header: 'DIMENSIONS (MM)\nC',                                            width: 14, val: s => s.dimension           || '' },
+            { header: 'DIMENSIONS (MM)\nL',                                            width: 14, val: ()  => ''                       },
+            { header: 'TRAVEL CORRESPONDING TO\nOPERATING TEMPERATURE (MM)\nUP',      width: 22, val: s => s.travel_up           || '' },
+            { header: 'TRAVEL CORRESPONDING TO\nOPERATING TEMPERATURE (MM)\nDOWN',    width: 22, val: s => s.travel_down         || '' },
+            { header: 'MAX VERTICAL TRAVEL (MM)\nUP',                                  width: 16, val: s => s.max_up              || '' },
+            { header: 'MAX VERTICAL TRAVEL (MM)\nDOWN',                                width: 16, val: s => s.max_down            || '' },
+            { header: 'HORIZONTAL MOVEMENT. (MM)\nAXIAL',                              width: 18, val: s => s.horiz_axial         || '' },
+            { header: 'HORIZONTAL MOVEMENT. (MM)\nTRANSVERSE',                         width: 18, val: s => s.horiz_trans         || '' },
+            { header: 'OPERATING LOAD (KG)',                                           width: 16, val: s => s.operating_load      || '' },
+            { header: 'HYDRO TEST LOAD (KG)',                                          width: 16, val: s => s.hydro_load          || '' },
+            { header: 'LINE/DUMMY PIPE MATERIAL\nAT SPRING LOCATION\n(NOTE-11)',       width: 24, val: s => s.dummy_pipe_material  || '' },
+            { header: 'LINE/DUMMY PIPE SIZE\nAT SPRING LOCATION\n(NOTE-11)',           width: 24, val: s => s.pipe_size_at_spring  || '' },
+            { header: 'SCHEDULE',                                                      width: 12, val: s => s.pipe_sch_at_spring  || '' },
+            { header: 'LINE DESIGN TEMP DEG.C',                                       width: 18, val: s => s.design_temp         || '' },
+            { header: 'INSULATION THICKNESS (MM)',                                     width: 18, val: s => s.insulation_thickness || '' },
+            { header: 'REMARKS (NOTE-7)',                                              width: 24, val: s => s.remarks             || '' },
         ];
 
         ws.columns = COLS.map(c => ({ width: c.width }));
@@ -1081,7 +1160,7 @@ router.get('/export-all', async (req, res) => {
             c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
             c.border    = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
         });
-        ws.getRow(3).height = 28;
+        ws.getRow(3).height = 52;
 
         // Data rows
         springs.forEach((s, idx) => {
@@ -1090,10 +1169,7 @@ router.get('/export-all', async (req, res) => {
             const rowFill = STATUS_FILL[status]      || STATUS_FILL.saved;
             const fntClr  = STATUS_FONT_COLOR[status] || STATUS_FONT_COLOR.saved;
 
-            const values = COLS.map(col => {
-                const v = s[col.key];
-                return (v === null || v === undefined) ? '' : v;
-            });
+            const values = COLS.map((col, ci) => col.val(s, idx));
 
             values.forEach((v, i) => {
                 const c = ws.getCell(rowNum, i + 1);
@@ -1104,10 +1180,7 @@ router.get('/export-all', async (req, res) => {
                 c.border    = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
             });
 
-            // Status cell bold + uppercase
-            ws.getCell(rowNum, 1).font = { bold: true, size: 9, name: 'Arial', color: { argb: fntClr } };
-            ws.getCell(rowNum, 1).value = (s.status || 'saved').toUpperCase();
-            ws.getRow(rowNum).height = 16;
+            ws.getRow(rowNum).height = 18;
         });
 
         if (!springs.length) {
@@ -1237,6 +1310,165 @@ router.post('/upload-mr-excel', async (req, res) => {
 
     } catch (err) {
         console.error('Excel upload error:', err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+/* ── Assign MR number (MAT selective export) ─────── */
+
+router.patch('/assign-mr', async (req, res) => {
+    try {
+        const { springTags, mrNo } = req.body;
+        if (!mrNo || !Array.isArray(springTags) || springTags.length === 0) {
+            return res.status(400).json({ ok: false, error: 'mrNo and springTags[] are required' });
+        }
+        const result = await pool.query(
+            `UPDATE spring_details
+             SET mr_no = $1
+             WHERE spring_tag = ANY($2::text[])`,
+            [mrNo.trim(), springTags]
+        );
+        res.json({ ok: true, updated: result.rowCount });
+    } catch (err) {
+        console.error('assign-mr error:', err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+/* ── Drop springs from MR (non-bid re-assignment) ─── */
+
+router.patch('/drop-mr', async (req, res) => {
+    try {
+        const { springTags } = req.body;
+        if (!Array.isArray(springTags) || springTags.length === 0) {
+            return res.status(400).json({ ok: false, error: 'springTags[] required' });
+        }
+        const result = await pool.query(
+            `UPDATE spring_details SET mr_no = NULL
+             WHERE spring_tag = ANY($1::text[]) AND status = 'approved'`,
+            [springTags]
+        );
+        res.json({ ok: true, updated: result.rowCount });
+    } catch (err) {
+        console.error('drop-mr error:', err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+/* ── MR Index ─────────────────────────────────────── */
+
+router.get('/mr-index', async (req, res) => {
+    try {
+        const { jobNo } = req.query;
+        if (!jobNo) return res.status(400).json({ ok: false, error: 'jobNo required' });
+        const result = await pool.query(
+            `SELECT mr_no,
+                    COUNT(*)::int AS spring_count,
+                    array_agg(DISTINCT unit_no ORDER BY unit_no) AS units,
+                    json_agg(
+                        json_build_object(
+                            'spring_tag',    spring_tag,
+                            'unit_no',       unit_no,
+                            'line_id',       line_id,
+                            'spring_type',   spring_type,
+                            'node_no',       node_no,
+                            'travel_up',     travel_up,
+                            'travel_down',   travel_down,
+                            'operating_load',operating_load
+                        ) ORDER BY unit_no, spring_tag
+                    ) AS springs
+             FROM spring_details
+             WHERE job_no = $1 AND mr_no IS NOT NULL AND mr_no <> ''
+             GROUP BY mr_no
+             ORDER BY mr_no`,
+            [jobNo]
+        );
+        res.json({ ok: true, data: result.rows });
+    } catch (err) {
+        console.error('mr-index error:', err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+/* ── Bid Upload (Excel from vendor) ──────────────── */
+
+router.post('/upload-bid', async (req, res) => {
+    try {
+        const { vendorName, jobNo, fileBase64 } = req.body;
+        if (!vendorName || !jobNo || !fileBase64) {
+            return res.status(400).json({ ok: false, error: 'vendorName, jobNo, fileBase64 required' });
+        }
+
+        const ExcelJS = require('exceljs');
+        const buf = Buffer.from(fileBase64, 'base64');
+        const wb  = new ExcelJS.Workbook();
+        await wb.xlsx.load(buf);
+
+        const ws = wb.getWorksheet(1);
+        if (!ws) return res.status(400).json({ ok: false, error: 'No worksheet found in file' });
+
+        /* EIL layout: data from row 10, spring tag col 3, bid cols 23-26.
+           Spring tags look like "B862-101-CSH-0041" — four hyphen-separated
+           alphanumeric parts, no spaces. Notes/footer rows are long sentences
+           and will not match this pattern. */
+        const SPRING_TAG_RE = /^[A-Za-z0-9]+-[A-Za-z0-9]+-[A-Za-z0-9]+-[A-Za-z0-9]+$/;
+        const rows = [];
+        ws.eachRow({ includeEmpty: false }, (row, rowNum) => {
+            if (rowNum < 10) return;
+            const tag = (row.getCell(3).text || row.getCell(3).value || '').toString().trim();
+            if (!tag || !SPRING_TAG_RE.test(tag)) return;
+            rows.push({
+                tag,
+                designation:  (row.getCell(23).value ?? '').toString().trim(),
+                constant:     (row.getCell(24).value ?? '').toString().trim(),
+                presetLoad:   (row.getCell(25).value ?? '').toString().trim(),
+                loadVar:      (row.getCell(26).value ?? '').toString().trim(),
+            });
+        });
+
+        if (rows.length === 0) {
+            return res.status(400).json({ ok: false, error: 'No spring rows found. Expected data from row 10 with spring tag in column C.' });
+        }
+
+        for (const r of rows) {
+            await pool.query(
+                `INSERT INTO spring_bid_data
+                    (spring_tag, job_no, vendor_name, spring_designation, spring_constant, preset_load, load_variation_pct)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7)
+                 ON CONFLICT (spring_tag, vendor_name)
+                 DO UPDATE SET spring_designation=$4, spring_constant=$5, preset_load=$6,
+                               load_variation_pct=$7, uploaded_at=NOW()`,
+                [r.tag, jobNo, vendorName, r.designation, r.constant, r.presetLoad, r.loadVar]
+            );
+        }
+
+        res.json({ ok: true, processed: rows.length });
+    } catch (err) {
+        console.error('upload-bid error:', err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+router.get('/bid-data', async (req, res) => {
+    try {
+        const { springTag, jobNo } = req.query;
+        if (!springTag) return res.status(400).json({ ok: false, error: 'springTag required' });
+
+        const params = [springTag];
+        let extra = '';
+        if (jobNo) { params.push(jobNo); extra = ' AND job_no = $2'; }
+
+        const result = await pool.query(
+            `SELECT vendor_name, spring_designation, spring_constant,
+                    preset_load, load_variation_pct, uploaded_at
+             FROM spring_bid_data
+             WHERE spring_tag = $1${extra}
+             ORDER BY vendor_name`,
+            params
+        );
+        res.json({ ok: true, data: result.rows });
+    } catch (err) {
+        console.error('bid-data error:', err);
         res.status(500).json({ ok: false, error: err.message });
     }
 });

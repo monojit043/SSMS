@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSMS — Spring Index</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="CSS/shared-navbar.css">
+    <link rel="stylesheet" href="CSS/spring-index.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<header class="navbar">
+    <a class="db-brand" href="/dashboard.html">
+        <div class="db-logo"><img src="Assets/eilround.gif" alt="SSMS" class="logo-img"></div>
+        <span class="db-brand-name">SSMS</span>
+    </a>
+    <nav>
+        <ul class="nav-links">
+            <li>
+                <a href="/dashboard.html">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                    Dashboard
+                </a>
+            </li>
+            <li id="jeNavItem">
+                <a href="/spring-details.html">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                    JE Portal
+                </a>
+            </li>
+            <li id="leNavItem">
+                <a href="/le-approval.html">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    LE Approval
+                </a>
+            </li>
+            <li>
+                <a href="/spring-index.html" class="nav-active">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    Spring Index
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <div class="navbar-right">
+        <span class="db-role-badge role-mat" id="roleBadge">MAT</span>
+        <div class="user-dropdown" id="userDropdown">
+            <button class="db-user-chip" id="userChipTrigger">
+                <div class="db-user-avatar" id="userAvatar">—</div>
+                <span class="db-user-name" id="userNameDisplay">—</span>
+                <svg class="user-chip-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="user-dropdown-menu">
+                <button class="user-menu-item" id="changePwdBtn">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Change Password
+                </button>
+                <div class="user-menu-divider"></div>
+                <button class="user-menu-item" id="logoutBtn">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Logout
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- MAIN LAYOUT -->
+<main class="si-main">
+
+    <!-- ── LEFT SIDEBAR ── -->
+    <aside class="si-sidebar">
+        <div class="si-sidebar-inner">
+
+            <!-- Context tag -->
+            <div class="si-context-tag">
+                <span class="si-tag-dot"></span>
+                <span>MAT Portal</span>
+            </div>
+
+            <h2 class="si-sidebar-title">Spring<br><em>Index</em></h2>
+
+            <div class="si-sidebar-divider"></div>
+
+            <!-- Job selector (always visible) -->
+            <div class="si-scope-block">
+                <label class="si-scope-label" for="siJobSelect">Job No.</label>
+                <div class="si-select-wrap">
+                    <select id="siJobSelect" class="si-select">
+                        <option value="">— Select job —</option>
+                    </select>
+                    <svg class="select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+            </div>
+
+            <!-- Sidebar tabs -->
+            <div class="si-sidebar-tabs">
+                <button class="si-sidebar-tab active" id="siTabPrep" type="button">MR Prep</button>
+                <button class="si-sidebar-tab" id="siTabMr" type="button">MR Released</button>
+            </div>
+
+            <!-- ── PANE: MR Prep ── -->
+            <div class="si-sidebar-pane" id="siSidebarPanePrep">
+
+                <!-- Unit chips -->
+                <div class="si-units-section" id="siUnitsSection" style="display:none;">
+                    <div class="si-units-header">
+                        <span class="si-units-label">Units</span>
+                        <button type="button" class="si-select-all-btn" id="siSelectAllBtn">Select All</button>
+                    </div>
+                    <div class="si-units-grid" id="siUnitsGrid"></div>
+                </div>
+
+                <!-- Stats -->
+                <div class="si-stat-row">
+                    <div class="si-stat">
+                        <span class="si-stat-num" id="siStatApproved">—</span>
+                        <span class="si-stat-lbl">Approved</span>
+                    </div>
+                    <div class="si-stat">
+                        <span class="si-stat-num" id="siStatMrd">—</span>
+                        <span class="si-stat-lbl">MR&apos;d</span>
+                    </div>
+                    <div class="si-stat">
+                        <span class="si-stat-num" id="siStatSelected">—</span>
+                        <span class="si-stat-lbl">Selected</span>
+                    </div>
+                </div>
+
+                <div class="si-sidebar-divider"></div>
+
+                <!-- Export -->
+                <p class="si-export-label">Export</p>
+
+                <button class="si-sidebar-export-btn" id="siExportEil" type="button" disabled>
+                    <div class="si-seb-left">
+                        <div class="si-seb-icon si-seb-eil">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        </div>
+                        <div class="si-seb-text">
+                            <span class="si-seb-name">EIL Standard</span>
+                            <span class="si-seb-hint" id="siEilHint">Select springs from table</span>
+                        </div>
+                    </div>
+                    <svg class="si-seb-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </button>
+
+                <button class="si-sidebar-export-btn" id="siExportIpmcs" type="button" disabled>
+                    <div class="si-seb-left">
+                        <div class="si-seb-icon si-seb-ipmcs">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        </div>
+                        <div class="si-seb-text">
+                            <span class="si-seb-name">IPMCS Format</span>
+                            <span class="si-seb-hint">Full schedule export</span>
+                        </div>
+                    </div>
+                    <svg class="si-seb-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </button>
+
+                <div class="si-status" id="siStatus"></div>
+
+                <div class="si-sidebar-divider" style="margin-top:6px;"></div>
+
+                <!-- Bid Upload -->
+                <p class="si-export-label">Bid Upload</p>
+                <div class="si-bid-form">
+                    <input type="text" id="siVendorName" class="si-vendor-input" placeholder="Vendor / company name">
+                    <label class="si-file-label" id="siBidFileLabel" for="siBidFile">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span id="siBidFileName">Choose filled EIL Excel…</span>
+                        <input type="file" id="siBidFile" accept=".xlsx" style="display:none">
+                    </label>
+                    <button type="button" id="siBidUploadBtn" class="si-bid-upload-btn">Upload Bid</button>
+                    <div id="siBidStatus" class="si-bid-status"></div>
+                </div>
+
+            </div><!-- /siSidebarPanePrep -->
+
+            <!-- ── PANE: MR Released ── -->
+            <div class="si-sidebar-pane" id="siSidebarPaneMr" style="display:none;">
+
+                <p class="si-export-label" style="margin-bottom:12px;">Released MRs</p>
+
+                <div class="si-mr-sidebar-empty" id="siMrSidebarEmpty">Select a job to view released MRs.</div>
+
+                <div class="si-mr-sidebar-list" id="siMrSidebarList"></div>
+
+
+            </div><!-- /siSidebarPaneMr -->
+
+            <!-- Footer (always visible) -->
+            <div class="si-sidebar-footer">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>SSMS v1.0</span>
+            </div>
+
+        </div>
+    </aside>
+
+    <!-- ── MAIN CONTENT ── -->
+    <div class="si-content">
+
+        <!-- Page header -->
+        <div class="si-page-header">
+            <div>
+                <p class="si-eyebrow">Spring Schedule Management System</p>
+                <h1 class="si-heading">Spring Index</h1>
+                <p class="si-subheading">Select a job and units from the sidebar, then tick springs to export via EIL Standard, or download the full IPMCS schedule.</p>
+            </div>
+        </div>
+
+        <!-- ══ PANE: MR PREP (default) ══ -->
+        <div id="siContentPanePrep">
+
+            <!-- Placeholder — shown when no scope is selected -->
+            <div class="si-placeholder" id="siPlaceholder">
+                <div class="si-placeholder-icon">
+                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <line x1="10" y1="9" x2="8" y2="9"/>
+                    </svg>
+                </div>
+                <p class="si-placeholder-title">No scope selected</p>
+                <p class="si-placeholder-desc">Pick a job and at least one unit<br>from the sidebar to load approved springs.</p>
+            </div>
+
+            <!-- Springs table card -->
+            <div class="si-springs-card" id="siSpringsCard" style="display:none;">
+                <div class="si-springs-toolbar">
+                    <span class="si-springs-count" id="siSpringsCount"></span>
+                </div>
+                <div class="si-table-wrap">
+                    <table class="si-table">
+                        <thead>
+                            <tr>
+                                <th class="si-check-th"><input type="checkbox" id="siSelectAllRows" title="Select / deselect all"></th>
+                                <th>Spring Tag</th>
+                                <th>MR No.</th>
+                                <th>Unit</th>
+                                <th>Line ID</th>
+                                <th>Type</th>
+                                <th>Node</th>
+                                <th>Travel ↑</th>
+                                <th>Travel ↓</th>
+                                <th>Op Load</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody id="siSpringsBody"></tbody>
+                    </table>
+                    <div class="si-table-empty" id="siSpringsEmpty" style="display:none;">
+                        No approved springs found for the selected scope.
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /siContentPanePrep -->
+
+        <!-- ══ PANE: MR RELEASED ══ -->
+        <div id="siContentPaneMr" style="display:none;">
+
+            <!-- Placeholder when no job selected -->
+            <div class="si-placeholder" id="siMrPlaceholder">
+                <div class="si-placeholder-icon">
+                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                </div>
+                <p class="si-placeholder-title">No job selected</p>
+                <p class="si-placeholder-desc">Select a job from the sidebar<br>to view released MRs.</p>
+            </div>
+
+            <!-- MR Index table -->
+            <div class="si-mr-index-card" id="siMrIndexCard" style="display:none;">
+                <div class="si-mr-index-header">
+                    <div class="si-mr-index-title">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        MR Released
+                    </div>
+                    <div class="si-mr-index-actions">
+                        <button type="button" class="si-mr-toggle-all" id="siMrToggleAll">Collapse All</button>
+                        <span class="si-mr-index-count" id="siMrIndexCount"></span>
+                    </div>
+                </div>
+                <div class="si-mr-index-table-wrap">
+                    <table class="si-mr-index-table">
+                        <thead>
+                            <tr>
+                                <th>Spring Tag</th>
+                                <th>Unit</th>
+                                <th>Line ID</th>
+                                <th>Type</th>
+                                <th>Node</th>
+                                <th>Travel ↑</th>
+                                <th>Travel ↓</th>
+                                <th>Op Load</th>
+                                <th class="si-mr-action-th"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="siMrIndexBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- /siContentPaneMr -->
+
+    </div><!-- /si-content -->
+
+</main>
+
+<!-- MR Number Modal -->
+<div class="si-modal-overlay" id="siMrModal" style="display:none;" role="dialog" aria-modal="true">
+    <div class="si-modal">
+        <p class="si-modal-title">EIL Standard Export</p>
+        <p class="si-modal-subtitle" id="siMrSubtitle">Enter the Material Requisition number for this export.</p>
+        <div class="si-modal-field">
+            <label for="siMrInput">MR Number</label>
+            <input type="text" id="siMrInput" class="si-modal-input" placeholder="e.g. B862MR001" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="si-modal-actions">
+            <button type="button" class="si-modal-cancel" id="siMrCancel">Cancel</button>
+            <button type="button" class="si-modal-confirm" id="siMrConfirm">Export</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Drop Modal -->
+<div class="si-modal-overlay" id="siDropModal" style="display:none;" role="dialog" aria-modal="true">
+    <div class="si-modal">
+        <p class="si-modal-title">Remove from MR</p>
+        <p class="si-modal-subtitle" id="siDropModalMsg"></p>
+        <div class="si-modal-actions">
+            <button type="button" class="si-modal-cancel" id="siDropModalCancel">Cancel</button>
+            <button type="button" class="si-drop-confirm-btn" id="siDropModalConfirm">Remove</button>
+        </div>
+    </div>
+</div>
+
+<script src="JS/spring-index.js"></script>
+</body>
+</html>

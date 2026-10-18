@@ -1,17 +1,11 @@
 const pimsPool = require('../db/pims-db');
 const localPool = require('../db/db');
 
-// Strip trailing single-letter suffix: P-111-12345-A → P-111-12345
-function normaliseLineNo(rawLineNo) {
-    if (!rawLineNo) return rawLineNo;
-    return rawLineNo.trim().replace(/-[A-Za-z]$/, '');
-}
-
 const syncPimsLines = async () => {
     try {
 
         const { rows } = await pimsPool.query(
-            `SELECT job_no, unit_no, line_no, stress_system
+            `SELECT job_no, unit_no, TRIM(line_no) AS line_no, stress_system
              FROM drawings
              WHERE stress_critical = 'Y'
                AND job_no IS NOT NULL
@@ -24,7 +18,7 @@ const syncPimsLines = async () => {
 
         for (const row of rows) {
 
-            const lineId = normaliseLineNo(row.line_no);
+            const lineId = row.line_no;   // zone suffix preserved (e.g. CL-101-02404-A)
 
             const result = await localPool.query(
                 `INSERT INTO stress_lines

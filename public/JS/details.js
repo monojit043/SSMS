@@ -406,6 +406,51 @@
             stressInput.placeholder = "Auto-filled";
         }
 
+        // Auto-fill Area/Zone from the trailing single-letter zone in the line ID
+        // e.g. CL-101-02404-A → A,  P-101-12345-B → B
+        // Read-only when zone is detected; editable when line has no zone suffix.
+        const zoneMatch = (lineId || "").match(/-([A-Za-z])$/);
+        const areaEl = document.getElementById("area");
+        if (areaEl) {
+            if (zoneMatch) {
+                if (!skipTagRegen) areaEl.value = zoneMatch[1].toUpperCase();
+                areaEl.readOnly = true;
+                areaEl.style.background = "";   // let CSS handle readonly look
+            } else {
+                if (!skipTagRegen) areaEl.value = "";  // clear stale zone from previous line
+                areaEl.readOnly = false;
+            }
+        }
+
+        // Auto-fill piping spec fields from PIMS linelist_lines (new spring only)
+        if (!skipTagRegen) {
+            // Clear immediately so stale values from a previously selected line don't linger
+            ['pipingclass', 'lineSize', 'insulation', 'insulationThickness', 'designtemp'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+        }
+        if (!skipTagRegen && lineId) {
+            fetch(`/api/master/line-spec?lineId=${encodeURIComponent(lineId)}`)
+                .then(r => r.json())
+                .then(json => {
+                    if (!json.ok || !json.data) return;
+                    const d = json.data;
+                    const set = (id, val) => {
+                        const el = document.getElementById(id);
+                        if (el && val != null && val !== '') el.value = val;
+                    };
+                    set('pipingclass',          d.piping_class);
+                    set('lineSize',             d.line_size);
+                    set('insulation',           d.insulation);
+                    set('insulationThickness',  d.insulation_thickness);
+                    set('designtemp',           d.design_temp);
+                    generateTag();          // refresh tag after fields change
+                    updateSectionStatus();
+                })
+                .catch(() => {});           // silent — PIMS may be unavailable
+        }
+
         // Resolve the line's real literal unit (only meaningful when the
         // session unit is a master). Falls back to the session unit otherwise.
         currentLineUnit = match ? (match.unit_no || null) : null;
@@ -1423,6 +1468,9 @@
                 const c = document.getElementById(id);
                 if (c) c.classList.add("hidden");
             });
+            // Restore area field to editable state after reset
+            const _area = document.getElementById("area");
+            if (_area) _area.readOnly = false;
             updateImage();
             generateTag();
             updateSectionStatus();
@@ -1684,6 +1732,15 @@
                             springTagInput.value = selected.spring_tag;
                             if (tagDisplay) tagDisplay.textContent = selected.spring_tag || "—";
 
+                            // Restore slider from accepted variation note in remarks
+                            const _varMatch = (selected.remarks || "").match(/Max Op Load Variation\s*=\s*(\d+)%/);
+                            const _slider = document.getElementById("evalSlider");
+                            const _sliderVal = document.getElementById("evalSliderVal");
+                            if (_slider) {
+                                _slider.value = _varMatch ? _varMatch[1] : "15";
+                                if (_sliderVal) _sliderVal.textContent = (_varMatch ? _varMatch[1] : "15") + "%";
+                            }
+
                             recalcSpringEvaluator();
                             updateImage();
                             update3D();
@@ -1845,13 +1902,22 @@
                           ${entry.remarks.trim().substring(0, 60)}${entry.remarks.trim().length > 60 ? '…' : ''}
                        </div>`
                     : '';
+                const bidBadge = entry.bid_count > 0
+                    ? `<span class="spring-card-bid-badge" title="${entry.bid_count} vendor bid${entry.bid_count !== 1 ? 's' : ''} received">
+                           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="1"/></svg>
+                           ${entry.bid_count} bid${entry.bid_count !== 1 ? 's' : ''}
+                       </span>`
+                    : '';
                 card.innerHTML = `
                     <div class="spring-card-header">
                         <span class="spring-card-tag">${entry.spring_tag}</span>
                         <span class="spring-status-dot status-${dotStatus}" title="${dotStatus}"></span>
                     </div>
                     <div class="spring-card-meta">Line: ${entry.line_id || "—"}</div>
-                    <span class="spring-card-type">${entry.spring_type} / Fig ${entry.figure}</span>
+                    <div class="spring-card-footer">
+                        <span class="spring-card-type">${entry.spring_type} / Fig ${entry.figure}</span>
+                        ${bidBadge}
+                    </div>
                     ${remarkSnippet}`;
                 card.addEventListener("click", () => openSpringDetail(entry, idx));
                 springList.appendChild(card);
@@ -1957,6 +2023,50 @@
             </div>`;
         }
 
+        /* Bid data: async-append below existing content */
+        if (e.spring_tag) {
+            const bidGroup = document.createElement("div");
+            bidGroup.className = "sdetail-group";
+            bidGroup.innerHTML = `<div class="sdetail-group-title">Vendor Bids</div><div class="sdetail-bid-loading">Loading bid data…</div>`;
+            body.appendChild(bidGroup);
+
+            const jobNo = localStorage.getItem("jobno") || "";
+            const url   = `/api/spring/bid-data?springTag=${encodeURIComponent(e.spring_tag)}${jobNo ? `&jobNo=${encodeURIComponent(jobNo)}` : ""}`;
+            fetch(url)
+                .then(r => r.json())
+                .then(json => {
+                    if (!json.ok || !json.data?.length) {
+                        bidGroup.innerHTML = `<div class="sdetail-group-title">Vendor Bids</div><div class="sdetail-bid-loading">No bid data yet.</div>`;
+                        return;
+                    }
+                    const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+                    const rows = json.data.map(b => `
+                        <tr>
+                            <td class="sdb-vendor">${esc(b.vendor_name)}</td>
+                            <td>${b.spring_designation || "—"}</td>
+                            <td>${b.spring_constant   || "—"}</td>
+                            <td>${b.preset_load       || "—"}</td>
+                            <td>${b.load_variation_pct || "—"}</td>
+                        </tr>`).join("");
+                    bidGroup.innerHTML = `
+                        <div class="sdetail-group-title">Vendor Bids (${json.data.length} vendor${json.data.length !== 1 ? "s" : ""})</div>
+                        <div style="overflow-x:auto;">
+                        <table class="sdetail-bid-table">
+                            <thead><tr>
+                                <th>Vendor</th>
+                                <th>Spring Designation</th>
+                                <th>Constant (kg/mm)</th>
+                                <th>Preset Load (kg)</th>
+                                <th>Load Variation (%)</th>
+                            </tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table></div>`;
+                })
+                .catch(() => {
+                    bidGroup.innerHTML = `<div class="sdetail-group-title">Vendor Bids</div><div class="sdetail-bid-loading">Could not load bid data.</div>`;
+                });
+        }
+
         springDetailOverlay.classList.add("active");
     }
 
@@ -2018,6 +2128,15 @@
         document.getElementById("remarks").value            = selected.remarks            || "";
         springTagInput.value = selected.spring_tag;
         if (tagDisplay) tagDisplay.textContent = selected.spring_tag || "—";
+
+        // Restore slider from accepted variation note in remarks
+        const _varMatch2 = (selected.remarks || "").match(/Max Op Load Variation\s*=\s*(\d+)%/);
+        const _slider2 = document.getElementById("evalSlider");
+        const _sliderVal2 = document.getElementById("evalSliderVal");
+        if (_slider2) {
+            _slider2.value = _varMatch2 ? _varMatch2[1] : "15";
+            if (_sliderVal2) _sliderVal2.textContent = (_varMatch2 ? _varMatch2[1] : "15") + "%";
+        }
 
         recalcSpringEvaluator();
         updateImage(); update3D(); updateAngleInfo(); reapplyTravelMutex(); updateSectionStatus();
@@ -2415,7 +2534,21 @@ ${e.remarks&&e.remarks.trim()?`<div class="rb"><div class="st">Remarks</div><div
     ══════════════════════════════════════════ */
 
     if (springTypeSelect) {
-        springTypeSelect.addEventListener("change", () => { updateImage(); generateTag(); updateSectionStatus(); });
+        springTypeSelect.addEventListener("change", () => {
+            updateImage();
+            if (editingSpringId) {
+                // In edit mode: keep the same sequence number, just swap the type code
+                const csTypes = ["CS1", "CS2", "CS3", "CS4"];
+                const newCode = csTypes.includes(springTypeSelect.value) ? "CSH" : "VSH";
+                const newTag  = (springTagInput ? springTagInput.value : "")
+                                    .replace(/-(CSH|VSH)-/, `-${newCode}-`);
+                if (springTagInput) springTagInput.value = newTag;
+                if (tagDisplay) tagDisplay.textContent = newTag || "—";
+            } else {
+                generateTag();
+            }
+            updateSectionStatus();
+        });
     }
     if (figureSelect) {
         figureSelect.addEventListener("change", () => { updateImage(); updateSectionStatus(); });
@@ -3011,6 +3144,9 @@ ${e.remarks&&e.remarks.trim()?`<div class="rb"><div class="st">Remarks</div><div
                 <td>${s.stress_system || "—"}</td>
                 <td>${statusBadge}</td>
                 <td class="vs-mr-cell">${s.mr_no || "—"}</td>
+                <td class="vs-bid-cell">${s.bid_count > 0
+                    ? `<span class="vs-bid-badge" title="${s.bid_count} vendor bid${s.bid_count !== 1 ? 's' : ''} received">${s.bid_count} vendor${s.bid_count !== 1 ? 's' : ''}</span>`
+                    : `<span class="vs-bid-none">—</span>`}</td>
                 <td>${orderBadge}</td>
                 <td>${actionCell}</td>`;
             tbody.appendChild(tr);
@@ -3160,6 +3296,7 @@ ${e.remarks&&e.remarks.trim()?`<div class="rb"><div class="st">Remarks</div><div
         const evalResultsEl = document.getElementById("evalResults");
         const evalPresetEl  = document.getElementById("evalPresetLoad");
         const evalStiffEl   = document.getElementById("evalStiffness");
+        const evalAcceptBtn = document.getElementById("evalAcceptBtn");
 
         function recalc() {
             const variation = parseInt(slider.value, 10);
@@ -3177,6 +3314,7 @@ ${e.remarks&&e.remarks.trim()?`<div class="rb"><div class="st">Remarks</div><div
                 evalErrorEl.textContent  = msg;
                 evalErrorEl.style.display  = "block";
                 evalResultsEl.style.display = "none";
+                if (evalAcceptBtn) evalAcceptBtn.style.display = "none";
                 evalTravelEl.textContent = "—";
                 evalDirEl.textContent    = "—";
                 evalDirEl.className      = "eval-direction";
@@ -3185,6 +3323,7 @@ ${e.remarks&&e.remarks.trim()?`<div class="rb"><div class="st">Remarks</div><div
             function showResults(presetLoad, stiffness, travel, dir) {
                 evalErrorEl.style.display  = "none";
                 evalResultsEl.style.display = "flex";
+                if (evalAcceptBtn) evalAcceptBtn.style.display = "block";
                 evalTravelEl.textContent   = Math.abs(travel).toFixed(2) + " MM";
                 evalDirEl.textContent      = dir;
                 evalDirEl.className        = "eval-direction " + dir.toLowerCase();
@@ -3226,6 +3365,22 @@ ${e.remarks&&e.remarks.trim()?`<div class="rb"><div class="st">Remarks</div><div
         travelDownEl.addEventListener("input", recalc);
         slider.addEventListener("input", recalc);
         recalc();
+
+        if (evalAcceptBtn) {
+            evalAcceptBtn.addEventListener("click", function () {
+                const variation = parseInt(slider.value, 10);
+                const remarksEl = document.getElementById("remarks");
+                if (remarksEl) {
+                    const note = `Max Op Load Variation = ${variation}%`;
+                    const existing = remarksEl.value.trim();
+                    if (/Max Op Load Variation\s*=\s*\d+%/.test(existing)) {
+                        remarksEl.value = existing.replace(/Max Op Load Variation\s*=\s*\d+%/, note);
+                    } else {
+                        remarksEl.value = existing ? existing + "\n" + note : note;
+                    }
+                }
+            });
+        }
     }
 
     generateTag();

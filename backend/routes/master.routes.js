@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/db');
+const pimsPool = require('../db/pims-db');
 const { getGroupMembers, getMasterFor, isMasterUnit, getMastersForJob } = require('../utils/unitGroups');
 
 /* =====================================================
@@ -96,25 +97,56 @@ router.get('/stress-lines', async (req, res) => {
             aggregated    = true;
         }
 
-        const [criticalRes, nonCriticalRes] = await Promise.all([
+        const [localCriticalRes, nonCriticalRes] = await Promise.all([
             pool.query(
                 `SELECT line_id, stress_system, unit_no
-           FROM stress_lines
-           WHERE job_no = $1 AND ${unitFilterSql}
-           ORDER BY line_id`,
+                 FROM stress_lines
+                 WHERE job_no = $1 AND ${unitFilterSql}
+                 ORDER BY line_id`,
                 [jobNo, unitParam]
             ),
             pool.query(
                 `SELECT line_id, stress_system, unit_no
-           FROM non_critical_lines
-           WHERE job_no = $1 AND ${unitFilterSql}
-           ORDER BY line_id`,
+                 FROM non_critical_lines
+                 WHERE job_no = $1 AND ${unitFilterSql}
+                 ORDER BY line_id`,
                 [jobNo, unitParam]
             )
         ]);
 
+        // Live pull from PIMS — zone suffix (e.g. -A, -B) is preserved as it is meaningful
+        let pimsRows = [];
+        try {
+            const pimsRes = await pimsPool.query(
+                `SELECT TRIM(line_no) AS line_id, stress_system, unit_no
+                 FROM drawings
+                 WHERE stress_critical = 'Y'
+                   AND job_no = $1
+                   AND ${unitFilterSql}
+                   AND line_no IS NOT NULL
+                 ORDER BY line_no`,
+                [jobNo, unitParam]
+            );
+            pimsRows = pimsRes.rows;
+        } catch (pimsErr) {
+            console.error('[PIMS live query failed, using local only]', pimsErr.message);
+        }
+
+        // Merge: local rows take priority; PIMS adds any lines not yet in local
+        const seenLocal = new Set(
+            localCriticalRes.rows.map(r => `${r.unit_no}|${r.line_id}`)
+        );
+        const pimsOnly = pimsRows.filter(
+            r => r.line_id && !seenLocal.has(`${r.unit_no}|${r.line_id}`)
+        );
+
+        const criticalRows = [
+            ...localCriticalRes.rows,
+            ...pimsOnly
+        ].sort((a, b) => (a.line_id || '').localeCompare(b.line_id || ''));
+
         const data = [
-            ...criticalRes.rows.map(r => ({ ...r, is_critical: true })),
+            ...criticalRows.map(r => ({ ...r, is_critical: true })),
             ...nonCriticalRes.rows.map(r => ({ ...r, is_critical: false }))
         ];
 
@@ -319,6 +351,55 @@ router.post('/non-critical-lines', async (req, res) => {
 
     } catch (err) {
         console.error(err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+/* =====================================================
+   6. LINE SPEC FROM PIMS linelist_lines
+   Live lookup by line ID — returns piping spec, size,
+   insulation, insulation thickness, design temp.
+   ===================================================== */
+router.get('/line-spec', async (req, res) => {
+    try {
+        const { lineId } = req.query;
+        if (!lineId) return res.status(400).json({ ok: false, error: 'lineId is required' });
+
+        // Strip trailing zone suffix: CL-101-02404-A → CL-101-02404
+        const baseLineId = lineId.trim().replace(/-[A-Za-z]$/, '');
+
+        // Parse service / unit / line_no from e.g. CL-101-02404
+        // service = everything before the first all-digit segment
+        // unit    = first all-digit segment
+        // line_no = last all-digit segment
+        const parts = baseLineId.split('-');
+        const firstDigitIdx = parts.findIndex(p => /^\d+$/.test(p));
+        if (firstDigitIdx < 1) {
+            return res.json({ ok: true, data: null });
+        }
+        const service = parts.slice(0, firstDigitIdx).join('-');
+        const unit    = parts[firstDigitIdx];
+        const lineNo  = parts[parts.length - 1];   // last segment
+
+        const result = await pimsPool.query(
+            `SELECT DISTINCT
+                 line_class          AS piping_class,
+                 line_size,
+                 insulation,
+                 insulation_thickness,
+                 design_temp
+             FROM linelist_lines
+             WHERE service  = $1
+               AND SPLIT_PART(unit_no, ' ', 1) = $2
+               AND line_no  = $3
+             LIMIT 1`,
+            [service, unit, lineNo]
+        );
+
+        res.json({ ok: true, data: result.rows[0] || null });
+
+    } catch (err) {
+        console.error('[line-spec]', err.message);
         res.status(500).json({ ok: false, error: err.message });
     }
 });

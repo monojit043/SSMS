@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 const { startStressSync } = require('./cron/sync.cron');
 
@@ -132,6 +132,20 @@ pool.query(`CREATE TABLE IF NOT EXISTS unit_master_map (
   created_at      TIMESTAMP    DEFAULT NOW(),
   UNIQUE(job_no, unit_no)
 )`).catch(err => console.error('Migration error (unit_master_map):', err.message));
+
+pool.query(`CREATE TABLE IF NOT EXISTS spring_bid_data (
+  id                   SERIAL PRIMARY KEY,
+  spring_tag           TEXT          NOT NULL,
+  job_no               TEXT          NOT NULL,
+  vendor_name          TEXT          NOT NULL,
+  spring_designation   TEXT          DEFAULT '',
+  spring_constant      TEXT          DEFAULT '',
+  preset_load          TEXT          DEFAULT '',
+  load_variation_pct   TEXT          DEFAULT '',
+  uploaded_at          TIMESTAMPTZ   DEFAULT NOW(),
+  uploaded_by          TEXT          DEFAULT '',
+  UNIQUE (spring_tag, vendor_name)
+)`).catch(err => console.error('Migration error (spring_bid_data):', err.message));
 
 pool.query(`CREATE TABLE IF NOT EXISTS non_critical_lines (
   id             SERIAL PRIMARY KEY,

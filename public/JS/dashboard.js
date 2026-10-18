@@ -18,6 +18,12 @@
         return;
     }
 
+    // MAT users belong on Spring Index, not the dashboard
+    if (role === "MAT") {
+        window.location.href = "/spring-index.html";
+        return;
+    }
+
     /* ══════════════════════════════════════════
        NAV SETUP — role-based visibility
     ══════════════════════════════════════════ */

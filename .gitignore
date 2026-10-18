@@ -11,3 +11,6 @@ backend/temp.xlsx
 .DS_Store
 Thumbs.db
 *.swp
+
+# Database backups (contain employee data and plain-text passwords)
+backend/db_backups/

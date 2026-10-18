@@ -3,10 +3,11 @@ const { syncStressLines } = require('../services/stress.service');
 const { syncPimsLines } = require('../services/pims-stress.service');
 
 const startStressSync = () => {
+    // Both syncs persist into stress_lines every 10 min.
+    // PIMS is also queried live on every /stress-lines request for zero-lag dropdown.
     cron.schedule('*/10 * * * *', async () => {
         console.log(`Running stress sync at: ${new Date().toISOString()}`);
 
-        // Both syncs run independently — failure of one does not affect the other
         try {
             const count = await syncStressLines();
             console.log(`[3000] Synced ${count} lines`);

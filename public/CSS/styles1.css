@@ -441,6 +441,22 @@ body {
     color: var(--sage-deep);
 }
 
+.pw-toggle-btn {
+    position: absolute;
+    right: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: rgba(59, 46, 30, 0.4);
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+.pw-toggle-btn:hover { color: var(--sage-deep); }
+
 .form-group input {
     width: 100%;
     padding: 13px 16px 13px 44px;

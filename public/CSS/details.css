@@ -267,7 +267,9 @@ body {
 .spring-card-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:3px; }
 .spring-card-tag    { font-family:'Cormorant Garamond',serif; font-size:14px; font-weight:600; color:var(--blush-light); letter-spacing:.5px; display:block; }
 .spring-card-meta   { font-size:10px; letter-spacing:.5px; color:rgba(245,240,232,.35); margin-bottom:4px; }
+.spring-card-footer { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .spring-card-type   { display:inline-flex; align-items:center; gap:4px; background:rgba(122,158,126,.15); border:1px solid rgba(122,158,126,.2); padding:1px 7px; border-radius:4px; font-size:9px; font-weight:700; color:var(--sage); letter-spacing:1px; text-transform:uppercase; }
+.spring-card-bid-badge { display:inline-flex; align-items:center; gap:3px; background:rgba(212,169,106,.12); border:1px solid rgba(212,169,106,.28); padding:1px 7px; border-radius:4px; font-size:9px; font-weight:700; color:rgba(212,169,106,.85); letter-spacing:.8px; text-transform:uppercase; }
 /* Status dot */
 .spring-status-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:4px; }
 .spring-status-dot.status-saved     { background:rgba(245,240,232,.2); border:1px solid rgba(245,240,232,.3); }
@@ -339,6 +341,13 @@ body {
 .sdetail-label { font-size:9px; letter-spacing:.8px; text-transform:uppercase; color:rgba(245,240,232,.3); font-weight:500; }
 .sdetail-val { font-size:12px; color:rgba(245,240,232,.8); font-weight:400; line-height:1.4; word-break:break-word; }
 .sdetail-remarks-box { background:rgba(122,158,126,.07); border:1px solid rgba(122,158,126,.15); border-radius:8px; padding:10px 12px; font-size:12px; color:rgba(245,240,232,.65); line-height:1.6; font-style:italic; white-space:pre-wrap; }
+/* Bid table */
+.sdetail-bid-table { width:100%; border-collapse:collapse; font-size:11px; }
+.sdetail-bid-table th { text-align:left; font-size:9px; letter-spacing:.8px; text-transform:uppercase; color:rgba(212,169,106,.45); font-weight:600; padding:5px 8px 5px 0; border-bottom:1px solid rgba(212,169,106,.1); }
+.sdetail-bid-table td { padding:6px 8px 6px 0; color:rgba(245,240,232,.75); border-bottom:1px solid rgba(255,255,255,.04); font-size:12px; }
+.sdetail-bid-table tr:last-child td { border-bottom:none; }
+.sdetail-bid-table .sdb-vendor { font-weight:600; color:rgba(232,201,144,.8); }
+.sdetail-bid-loading { font-size:11px; color:rgba(245,240,232,.25); font-style:italic; }
 /* Modal nav */
 .sdetail-nav { display:flex; align-items:center; gap:5px; }
 .sdetail-nav-btn { background:transparent; border:1px solid rgba(212,169,106,.2); border-radius:5px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:rgba(245,240,232,.4); transition:all .18s; padding:0; }
@@ -1315,6 +1324,29 @@ input[readonly] { background:rgba(59,46,30,.04); color:var(--bark-light); cursor
 }
 .eval-result-val { font-size: 20px; font-weight: 700; color: var(--bark); }
 
+.eval-accept-btn {
+    margin-left: auto;
+    align-self: center;
+    padding: 6px 16px;
+    background: rgba(78,117,83,.08);
+    border: 1.5px solid rgba(78,117,83,.35);
+    border-radius: 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--sage-deep);
+    cursor: pointer;
+    transition: background .2s, border-color .2s, color .2s;
+    white-space: nowrap;
+}
+.eval-accept-btn:hover {
+    background: rgba(78,117,83,.16);
+    border-color: rgba(78,117,83,.55);
+    color: #2e4d32;
+}
+
 /* ══════════════════════════════════════════════════
    VIEW SPRINGS PANEL
 ══════════════════════════════════════════════════ */
@@ -1529,6 +1561,9 @@ input[readonly] { background:rgba(59,46,30,.04); color:var(--bark-light); cursor
 .vs-order-delivered   { background: rgba(60,160,80,.12);   color: #277a3c; }
 
 .vs-mr-cell { font-size: 12px; color: var(--bark-light); letter-spacing: .3px; }
+.vs-bid-cell { white-space: nowrap; }
+.vs-bid-badge { display:inline-flex; align-items:center; background:rgba(212,169,106,.14); border:1px solid rgba(212,169,106,.32); border-radius:20px; padding:3px 10px; font-size:10px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:#8a5a10; }
+.vs-bid-none  { font-size:12px; color:rgba(59,46,30,.28); }
 
 .vs-vendor-btn {
     display: inline-flex;

@@ -180,6 +180,12 @@
                     LE Approval
                 </a>
             </li>
+            <li id="siNavItem" style="display:none;">
+                <a href="/spring-index.html">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    Spring Index
+                </a>
+            </li>
             <li>
                 <button type="button" id="notesNavBtn" class="nav-notes-btn">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -390,18 +396,36 @@
     <div class="le-content" id="leContent">
 
         <!-- Page header -->
-        <div class="le-page-header">
+        <div class="le-page-header" id="lePageHeader">
             <div class="le-page-header-left">
                 <p class="form-eyebrow">Spring Schedule Management System</p>
-                <h1 class="le-heading">Review &amp; Approval</h1>
-                <p class="le-subheading">Review submitted spring records and approve or reject.</p>
+                <h1 class="le-heading" id="lePageHeading">Review &amp; Approval</h1>
+                <p class="le-subheading" id="lePageSubheading">Review submitted spring records and approve or reject.</p>
             </div>
-            <div class="le-page-header-right">
+            <!-- Right side: review mode -->
+            <div class="le-page-header-right" id="leHeaderRightReview">
                 <div class="last-refresh-wrap">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.45"/></svg>
                     <span id="lastRefreshText">Never refreshed</span>
                 </div>
                 <button class="btn-refresh" id="refreshBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.45"/></svg>
+                    Refresh
+                </button>
+            </div>
+            <!-- Right side: view springs mode -->
+            <div class="le-page-header-right" id="leHeaderRightView" style="display:none;">
+                <span class="le-vs-count-badge" id="leVsCountBadge">0 springs</span>
+                <button class="le-vs-upload-btn" id="leVsUploadMrBtn" title="Upload MR/Order Excel">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Upload MR Excel
+                </button>
+                <input type="file" id="leMrExcelFileInput" accept=".xlsx,.xls" style="display:none;">
+                <button class="btn-refresh" id="leVsRefreshBtn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.45"/></svg>
                     Refresh
                 </button>
@@ -483,7 +507,7 @@
 
 
         <!-- Spring table -->
-        <div class="le-table-wrap">
+        <div class="le-table-wrap" id="leTableWrap">
             <table class="le-table" id="leTable">
                 <thead>
                     <tr>
@@ -551,80 +575,52 @@
             </button>
         </div>
 
+        <!-- VIEW SPRINGS PANEL (inside leContent so toolbar/sel-bar appear directly above) -->
+        <div class="le-vs-panel" id="leViewSpringsPanel" style="display:none;">
+
+            <!-- Aggregate-mode banner -->
+            <div class="le-aggregate-banner hidden" id="leAggregateBannerVs">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><path d="M2 21v-2a4 4 0 0 1 4-4h2"/><path d="M14 21v-2a4 4 0 0 1 4-4h2"/></svg>
+                <span>Viewing combined data — Master <strong id="leAggMasterUnitVs"></strong> (<span id="leAggMembersVs"></span>)</span>
+            </div>
+
+            <div class="le-vs-table-wrap">
+                <table class="le-vs-table">
+                    <thead>
+                        <tr>
+                            <th class="le-vs-th-num">#</th>
+                            <th>Tag</th>
+                            <th>Line ID</th>
+                            <th>Unit</th>
+                            <th>Area</th>
+                            <th>Type / Fig / Qty</th>
+                            <th>Dim (MM)</th>
+                            <th>Stress System No</th>
+                            <th>Added By</th>
+                            <th>MR No</th>
+                            <th>Order Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leVsTableBody">
+                        <tr class="le-vs-empty-row" id="leVsTableEmpty">
+                            <td colspan="12">
+                                <div class="le-vs-empty-state">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <path d="M12 8v4M12 16h.01"/>
+                                    </svg>
+                                    <span>No springs found for this Job / Unit</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div><!-- /le-vs-panel -->
+
     </div><!-- /le-content -->
-
-    <!-- ══════════════════════════════════════
-         VIEW SPRINGS PANEL
-    ═══════════════════════════════════════ -->
-    <div class="le-vs-panel" id="leViewSpringsPanel" style="display:none;">
-
-        <div class="le-vs-header">
-            <div class="le-vs-title-wrap">
-                <h2 class="le-vs-title">Spring Schedule</h2>
-                <p class="le-vs-sub">Job <strong id="leVsPanelJob">—</strong> &nbsp;·&nbsp; Unit <strong id="leVsPanelUnit">—</strong></p>
-            </div>
-            <div class="le-vs-header-actions">
-                <span class="le-vs-count-badge" id="leVsCountBadge">0 springs</span>
-                <button class="le-vs-upload-btn" id="leVsUploadMrBtn" title="Upload MR/Order Excel">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    Upload MR Excel
-                </button>
-                <input type="file" id="leMrExcelFileInput" accept=".xlsx,.xls" style="display:none;">
-                <button class="le-vs-refresh-btn" id="leVsRefreshBtn">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                        <polyline points="23 4 23 10 17 10"/>
-                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                    </svg>
-                    Refresh
-                </button>
-            </div>
-        </div>
-
-        <!-- Aggregate-mode banner — shown when the selected unit is a master unit -->
-        <div class="le-aggregate-banner hidden" id="leAggregateBannerVs">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><path d="M2 21v-2a4 4 0 0 1 4-4h2"/><path d="M14 21v-2a4 4 0 0 1 4-4h2"/></svg>
-            <span>Viewing combined data — Master <strong id="leAggMasterUnitVs"></strong> (<span id="leAggMembersVs"></span>)</span>
-        </div>
-
-        <div class="le-vs-table-wrap">
-            <table class="le-vs-table">
-                <thead>
-                    <tr>
-                        <th class="le-vs-th-num">#</th>
-                        <th>Tag</th>
-                        <th>Line ID</th>
-                        <th>Unit</th>
-                        <th>Area</th>
-                        <th>Type / Fig / Qty</th>
-                        <th>Dim (MM)</th>
-                        <th>Stress System No</th>
-                        <th>Added By</th>
-                        <th>MR No</th>
-                        <th>Order Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="leVsTableBody">
-                    <tr class="le-vs-empty-row" id="leVsTableEmpty">
-                        <td colspan="12">
-                            <div class="le-vs-empty-state">
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <path d="M12 8v4M12 16h.01"/>
-                                </svg>
-                                <span>No springs found for this Job / Unit</span>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-    </div><!-- /le-vs-panel -->
 
     <!-- ══════════════════════════════════════
          UNIT GROUPS PANEL (Master Unit Mapping)
