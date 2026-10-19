@@ -245,7 +245,7 @@ router.post('/non-critical-lines', requireUnitRole(ROLES.EDIT), async (req, res)
 });
 
 /* =====================================================
-   6. LINE SPEC FROM THE PIMS LINE LIST (view pims_line_list)
+   6. LINE SPEC FROM THE ePULSE LINE LIST ON PC-1 (view epulse_line_list)
    Live lookup by line ID — returns piping spec, size,
    insulation, insulation thickness, design temp.
    ===================================================== */
@@ -272,7 +272,7 @@ router.get('/line-spec', async (req, res) => {
 
         const result = await pool.query(
             `SELECT piping_class, line_size, insulation, insulation_thickness, design_temp
-             FROM pims_line_list
+             FROM epulse_line_list
              WHERE service = $1 AND unit_no = $2 AND line_no = $3
                AND ($4::text IS NULL OR job_no = $4)
              LIMIT 1`,

@@ -422,7 +422,7 @@
             }
         }
 
-        // Auto-fill piping spec fields from PIMS linelist_lines (new spring only)
+        // Auto-fill piping spec fields from the ePULSE line list on PC-1 (new spring only)
         if (!skipTagRegen) {
             // Clear immediately so stale values from a previously selected line don't linger
             ['pipingclass', 'lineSize', 'insulation', 'insulationThickness', 'designtemp'].forEach(id => {
@@ -431,7 +431,7 @@
             });
         }
         if (!skipTagRegen && lineId) {
-            fetch(`/api/master/line-spec?lineId=${encodeURIComponent(lineId)}`)
+            fetch(`/api/master/line-spec?lineId=${encodeURIComponent(lineId)}&jobNo=${encodeURIComponent(localStorage.getItem("jobno") || "")}`)
                 .then(r => r.json())
                 .then(json => {
                     if (!json.ok || !json.data) return;

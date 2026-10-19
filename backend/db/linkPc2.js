@@ -3,13 +3,15 @@
 //
 //   eil_employees (PC-2) → schema pc2_emp  (users)
 //   cmp_pims_1014 (PC-2) → schema pc2_pims (projects, units, user_unit_roles, project_sgls,
-//                                           stress_lines, line_list)
+//                                           stress_lines)
+//   ePULSE DB     (PC-1) → schema pc1_epulse (line_list — the line list is kept in ePULSE,
+//                                           uploaded through ll-normalize.html; decided 2026-10-19)
 //
 // Local tables replaced by read-only VIEWS of the same name (every read goes to PC-2):
 //   master_employees  ← eil_employees.users        (no password column)
 //   stress_lines      ← PIMS stress_lines           (was synced every 10 min by cron)
 //   unit_master_map   ← PIMS units.parent_unit      (was SSMS's own grouping)
-// New views: pims_projects, pims_units, pims_line_list, effective_assignments.
+// New views: pims_projects, pims_units, epulse_line_list, effective_assignments.
 // user_assignments stays SSMS's own table (LE / JE / MAT); its plain-text password
 // column is dropped — login is checked against eil_employees.
 //
@@ -59,6 +61,7 @@ function serverCfg(prefix, defaultDb) {
 async function main() {
   const e = serverCfg("EMP_DB", "eil_employees");
   const p = serverCfg("PIMS_DB", "cmp_pims_1014");
+  const l = serverCfg("EPULSE_DB", "ePULSE_DEV_v1.0.0");
   if (!/cmp_pims/i.test(p.dbname)) throw new Error(`PIMS_DB_NAME must be the PC-2 PIMS DB (cmp_pims_…), got ${p.dbname}`);
 
   console.log(`Linking ${process.env.DB_NAME} to PC-2 ${e.host} (${e.dbname}, ${p.dbname})${DRY_RUN ? " — DRY RUN, will roll back" : ""}`);
@@ -73,6 +76,8 @@ async function main() {
       DROP SCHEMA IF EXISTS pc2_pims CASCADE;
       DROP SERVER IF EXISTS pc2_employees CASCADE;
       DROP SERVER IF EXISTS pc2_pims CASCADE;
+      DROP SCHEMA IF EXISTS pc1_epulse CASCADE;
+      DROP SERVER IF EXISTS pc1_epulse CASCADE;
 
       CREATE SERVER pc2_employees FOREIGN DATA WRAPPER postgres_fdw
         OPTIONS (host ${lit(e.host)}, port ${lit(e.port)}, dbname ${lit(e.dbname)}, connect_timeout '10');
@@ -87,8 +92,15 @@ async function main() {
         OPTIONS (user ${lit(p.user)}, password ${lit(p.password)});
       CREATE SCHEMA pc2_pims;
       IMPORT FOREIGN SCHEMA public
-        LIMIT TO (projects, units, user_unit_roles, project_sgls, stress_lines, line_list)
+        LIMIT TO (projects, units, user_unit_roles, project_sgls, stress_lines)
         FROM SERVER pc2_pims INTO pc2_pims;
+
+      CREATE SERVER pc1_epulse FOREIGN DATA WRAPPER postgres_fdw
+        OPTIONS (host ${lit(l.host)}, port ${lit(l.port)}, dbname ${lit(l.dbname)}, connect_timeout '10');
+      CREATE USER MAPPING FOR CURRENT_USER SERVER pc1_epulse
+        OPTIONS (user ${lit(l.user)}, password ${lit(l.password)});
+      CREATE SCHEMA pc1_epulse;
+      IMPORT FOREIGN SCHEMA public LIMIT TO (line_list) FROM SERVER pc1_epulse INTO pc1_epulse;
     `);
 
     console.log("  2/4 removing old local copies...");
@@ -170,14 +182,16 @@ async function main() {
         FROM pc2_pims.stress_lines s
         JOIN pc2_pims.projects pr ON pr.id = s.project_id AND pr.is_active = 1;
 
-      -- Line specification (class, size, insulation, design temp) from the PIMS line list
-      CREATE VIEW public.pims_line_list AS
-        SELECT project_id::text AS job_no, split_part(unit_no, ' ', 1)::text AS unit_no,
+      -- Line specification (class, size, insulation, design temp) from the ePULSE line list (PC-1).
+      -- unit_no is the unit code: "101 (PDH Unit)" / "101(PDH Unit)" → "101"
+      CREATE VIEW public.epulse_line_list AS
+        SELECT project_id::text AS job_no,
+               COALESCE(substring(unit_no from '^s*(d+)'), split_part(unit_no, ' ', 1))::text AS unit_no,
                service::text AS service, line_no::text AS line_no,
                line_class::text AS piping_class, line_size::text AS line_size,
                insulation::text AS insulation, insulation_thickness::text AS insulation_thickness,
                design_temp::text AS design_temp
-        FROM pc2_pims.line_list;
+        FROM pc1_epulse.line_list;
 
       -- EFFECTIVE roles (decided 2026-10-18). GL is never stored — PIMS only:
       --   PIMS GL / SGL on ANY unit of a group → GL on that group's master unit;
@@ -212,7 +226,7 @@ async function main() {
              (SELECT count(*) FROM pims_projects)::int AS pims_jobs,
              (SELECT count(*) FROM pims_units WHERE is_master)::int AS pims_master_units,
              (SELECT count(*) FROM stress_lines)::int AS stress_lines,
-             (SELECT count(*) FROM pims_line_list)::int AS line_list_rows,
+             (SELECT count(*) FROM epulse_line_list)::int AS epulse_line_list_rows,
              (SELECT count(DISTINCT employee_id) FROM effective_assignments WHERE source = 'pims')::int AS gl_from_pims,
              (SELECT count(*) FROM effective_assignments WHERE source = 'assigned')::int AS stored_assignments_in_use,
              (SELECT count(*) FROM user_assignments)::int AS stored_assignments_total`);
