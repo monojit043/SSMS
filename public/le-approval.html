@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="CSS/le-approval.css">
     <link rel="stylesheet" href="CSS/shared-navbar.css">
-    <link rel="stylesheet" href="CSS/change-password.css">
 </head>
 <body>
 
@@ -215,11 +214,6 @@
                 <svg class="user-chip-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             <div class="user-dropdown-menu">
-                <button class="user-menu-item" id="changePwdBtn">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    Change Password
-                </button>
-                <div class="user-menu-divider"></div>
                 <button class="user-menu-item" id="changeJobUnitBtn">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
                     Change Job / Unit
@@ -854,41 +848,8 @@
     </div>
 </div>
 
-<!-- CHANGE PASSWORD MODAL -->
-<div class="cpw-backdrop" id="changePwdOverlay" style="display:none;">
-    <div class="cpw-box">
-        <div class="cpw-header">
-            <h3 class="cpw-title">Change Password</h3>
-            <button class="cpw-close" id="cpwClose" title="Close">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-            </button>
-        </div>
-        <div class="cpw-body">
-            <div class="cpw-field">
-                <label class="cpw-label">Current Password</label>
-                <input class="cpw-input" type="password" id="cpwCurrent" placeholder="Enter current password">
-            </div>
-            <div class="cpw-field">
-                <label class="cpw-label">New Password</label>
-                <input class="cpw-input" type="password" id="cpwNew" placeholder="Enter new password">
-            </div>
-            <div class="cpw-field">
-                <label class="cpw-label">Confirm New Password</label>
-                <input class="cpw-input" type="password" id="cpwConfirm" placeholder="Confirm new password">
-            </div>
-        </div>
-        <div class="cpw-error" id="cpwError"></div>
-        <div class="cpw-footer">
-            <button class="cpw-btn cpw-cancel" id="cpwCancel">Cancel</button>
-            <button class="cpw-btn cpw-save" id="cpwSave">Update Password</button>
-        </div>
-    </div>
-</div>
 
 <script src="JS/session.js"></script>
 <script src="JS/le-approval.js"></script>
-<script src="JS/change-password.js"></script>
 </body>
 </html>

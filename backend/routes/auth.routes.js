@@ -45,8 +45,4 @@ router.get('/assignments', async (req, res) => {
     }
 });
 
-router.put('/change-password', (req, res) => {
-    res.status(403).json({ ok: false, error: 'Passwords are managed centrally (one account for all modules). Please contact ITS.' });
-});
-
 module.exports = router;

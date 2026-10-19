@@ -135,7 +135,7 @@
     });
 
     function loadUnits(jobNo) {
-        return fetch(`/api/master/units?jobNo=${encodeURIComponent(jobNo)}&includeMasters=true`)
+        return fetch(`/api/master/units?jobNo=${encodeURIComponent(jobNo)}`)
             .then(r => r.json())
             .then(j => {
                 if (!j.ok) return;

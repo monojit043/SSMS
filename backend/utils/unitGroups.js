@@ -35,18 +35,6 @@ async function isMasterUnit(jobNo, unitNo) {
     return result.rows.length > 0;
 }
 
-// Returns the job's master units as plain rows: [{ unit_no: '150', members: ['150','208',...] }]
-async function getMastersForJob(jobNo) {
-    const result = await pool.query(
-        `SELECT master_unit_no, array_agg(unit_no ORDER BY unit_no) AS members
-         FROM unit_master_map
-         WHERE job_no = $1
-         GROUP BY master_unit_no`,
-        [jobNo]
-    );
-    return result.rows.map(r => ({ unit_no: r.master_unit_no, members: r.members }));
-}
-
 // Every unit belonging to the groups of the given units (a master expands to all its members).
 async function expandUnits(jobNo, unitNos) {
     const result = await pool.query(
@@ -58,4 +46,4 @@ async function expandUnits(jobNo, unitNos) {
     return [...new Set([...unitNos, ...result.rows.map(r => r.unit_no)])].sort();
 }
 
-module.exports = { getGroupMembers, getMasterFor, isMasterUnit, getMastersForJob, expandUnits };
+module.exports = { getGroupMembers, getMasterFor, isMasterUnit, expandUnits };

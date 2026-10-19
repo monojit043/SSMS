@@ -930,35 +930,6 @@
        JOB / UNIT MODAL
     ══════════════════════════════════════════ */
 
-    // document.addEventListener("DOMContentLoaded", function () {
-
-    //     const assignments = JSON.parse(localStorage.getItem("assignments") || "[]");
-
-    //     console.log("Assignments:", assignments);
-
-    //     // ❌ No session
-    //     if (assignments.length === 0) {
-    //         localStorage.clear();
-    //         window.location.href = "/Login.html";
-    //         return;
-    //     }
-
-    //     // ✅ SINGLE JOB → AUTO LOAD
-    //     if (assignments.length === 1) {
-    //         const a = assignments[0];
-
-    //         localStorage.setItem("jobno", a.job_no);
-    //         localStorage.setItem("unit", a.unit_no);
-
-    //         closeModal(a.job_no, a.unit_no);
-    //         loadStressLines(a.job_no, a.unit_no);
-    //         return;
-    //     }
-
-    //     // ✅ MULTIPLE JOBS → SHOW MODAL
-    //     openJobSelectionFromAssignments(assignments);
-
-    // });
 
     document.addEventListener("DOMContentLoaded", function () {
 

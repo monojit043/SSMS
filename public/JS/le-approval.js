@@ -199,35 +199,6 @@
     }
 
 
-    // document.addEventListener("DOMContentLoaded", function () {
-
-    //     const assignments = JSON.parse(localStorage.getItem("assignments") || "[]");
-
-    //     console.log("Assignments:", assignments);
-
-    //     // 🔹 CASE 1 — No assignments → logout
-    //     if (assignments.length === 0) {
-    //         localStorage.clear();
-    //         window.location.href = "/Login.html";
-    //         return;
-    //     }
-
-    //     // 🔹 CASE 2 — Only ONE job → auto select
-    //     if (assignments.length === 1) {
-
-    //         const a = assignments[0];
-
-    //         localStorage.setItem("jobno", a.job_no);
-    //         localStorage.setItem("unit", a.unit_no);
-
-    //         closeJobModal(a.job_no, a.unit_no);
-    //         return;
-    //     }
-
-    //     // 🔹 CASE 3 — MULTIPLE JOBS → show modal
-    //     openJobSelectionFromAssignments(assignments);
-
-    // });
 
     document.addEventListener("DOMContentLoaded", function () {
 

@@ -6,8 +6,6 @@
 // See PC1_PC2_INTEGRATION_GUIDE.md.
 const pool = require('../db/db');
 
-const RANK = { JE: 1, LE: 2, GL: 3 };   // MAT sits outside this chain
-
 // { employeeId, fullName, department } or null if unknown / inactive
 async function loadLiveUser(employeeId) {
     const { rows } = await pool.query(
@@ -74,4 +72,4 @@ async function rolesOnJob(employeeId, jobNo) {
     return rows.map(r => r.role);
 }
 
-module.exports = { RANK, loadLiveUser, checkCredentials, getAssignments, rolesOnUnit, rolesOnJob };
+module.exports = { loadLiveUser, checkCredentials, getAssignments, rolesOnUnit, rolesOnJob };
