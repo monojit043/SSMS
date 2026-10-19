@@ -630,7 +630,7 @@
         <div class="le-vs-header">
             <div class="le-vs-title-wrap">
                 <h2 class="le-vs-title">Unit Groups</h2>
-                <p class="le-vs-sub">Define master units for offsite job/unit numbering &amp; combined review</p>
+                <p class="le-vs-sub">Master units and their member units, live from PIMS (parent unit)</p>
             </div>
             <div class="le-vs-header-actions">
                 <div class="select-wrapper toolbar-select-wrap">
@@ -642,28 +642,12 @@
             </div>
         </div>
 
-        <!-- Create / Edit form -->
-        <div class="ug-form-card" id="ugFormCard" style="display:none;">
-            <h3 class="ug-form-title" id="ugFormTitle">Create Unit Group</h3>
-            <div class="ug-form-field">
-                <label>Master Unit No. <span class="ug-form-hint">(can be an existing unit, or a new schedule/document number e.g. 150)</span></label>
-                <input type="text" id="ugMasterSelect" class="ug-master-input" list="ugMasterUnitOptions" placeholder="e.g. 150" autocomplete="off">
-                <datalist id="ugMasterUnitOptions"></datalist>
-            </div>
-            <div class="ug-form-field">
-                <label>Member Units <span class="ug-form-hint">(springs entered under these will follow the master's numbering)</span></label>
-                <div class="ug-member-grid" id="ugMemberGrid"></div>
-            </div>
-            <div class="ug-form-actions">
-                <button type="button" class="btn-secondary" id="ugCancelBtn">Cancel</button>
-                <button type="button" class="btn-primary" id="ugSaveBtn">Save Group</button>
-            </div>
+        <!-- Groups are maintained in PIMS since 2026-10-19 — this panel only shows them -->
+        <div class="ug-pims-note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <span><strong>Managed in PIMS.</strong> Unit groups come from each unit's parent unit in PIMS and can't be changed here.
+            Springs on a member unit get the master unit's tag and share its numbering. To add, move or remove a unit, change its parent unit in PIMS.</span>
         </div>
-
-        <button type="button" class="bulk-btn bulk-approve-all ug-new-btn" id="ugNewGroupBtn">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            New Unit Group
-        </button>
 
         <div class="le-vs-table-wrap">
             <table class="le-vs-table">
@@ -672,18 +656,17 @@
                         <th class="le-vs-th-num">#</th>
                         <th>Master Unit</th>
                         <th>Member Units</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="ugTableBody">
                     <tr class="le-vs-empty-row" id="ugTableEmpty">
-                        <td colspan="4">
+                        <td colspan="3">
                             <div class="le-vs-empty-state">
                                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
                                     <circle cx="12" cy="12" r="10"/>
                                     <path d="M12 8v4M12 16h.01"/>
                                 </svg>
-                                <span>Select a Job No. to manage unit groups</span>
+                                <span>Select a Job No. to view unit groups</span>
                             </div>
                         </td>
                     </tr>

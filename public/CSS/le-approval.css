@@ -2741,6 +2741,16 @@ body {
     display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;
 }
 
+/* Unit Groups are read-only (from PIMS) — explanatory note */
+.ug-pims-note {
+    display: flex; align-items: flex-start; gap: 9px;
+    margin: 0 0 14px; padding: 10px 14px;
+    background: rgba(212,169,106,.12); border: 1px solid rgba(212,169,106,.35);
+    border-radius: 8px; color: #8a5a10; font-size: 12px; line-height: 1.5;
+}
+.ug-pims-note svg { flex-shrink: 0; margin-top: 2px; }
+.ug-unit-name { color: var(--bark-light); font-size: 11px; margin-left: 6px; }
+
 .ug-td-num { width: 36px; text-align: center; color: var(--bark-light); font-size: 12px; }
 
 .ug-tag-chip {

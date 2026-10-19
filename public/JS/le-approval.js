@@ -1403,9 +1403,9 @@
        UNIT GROUPS (Master Unit Mapping)
     ══════════════════════════════════════════ */
 
-    let ugAllUnits     = [];   // unit_no list for the selected job
-    let ugAllGroups    = [];   // [{ master_unit_no, members: [...] }]
-    let ugEditingMaster = null;
+    // Read-only since 2026-10-19: groups come from PIMS (each unit's parent unit).
+    // Creating / editing / dissolving groups is done in PIMS, not here.
+    let ugAllGroups = [];   // [{ master_unit_no, unit_name, members: [...], member_names: {unit: name} }]
 
     async function initUnitGroupsPanel() {
         const jobSelect = document.getElementById("ugJobSelect");
@@ -1432,23 +1432,17 @@
     }
 
     document.getElementById("ugJobSelect")?.addEventListener("change", function () {
-        document.getElementById("ugFormCard").style.display = "none";
-        ugEditingMaster = null;
         if (this.value) loadUnitGroupsForJob(this.value);
-        else { ugAllUnits = []; ugAllGroups = []; renderUnitGroupsTable([]); }
+        else { ugAllGroups = []; renderUnitGroupsTable([], false); }
     });
 
     async function loadUnitGroupsForJob(jobNo) {
         try {
-            const [unitsRes, groupsRes] = await Promise.all([
-                fetch(`/api/master/units?jobNo=${encodeURIComponent(jobNo)}`),
-                fetch(`/api/master/unit-groups?jobNo=${encodeURIComponent(jobNo)}`)
-            ]);
-            const unitsJson  = await unitsRes.json();
-            const groupsJson = await groupsRes.json();
-            ugAllUnits  = (unitsJson.data || []).map(u => u.unit_no);
-            ugAllGroups = groupsJson.data || [];
-            renderUnitGroupsTable(ugAllGroups);
+            const res  = await fetch(`/api/master/unit-groups?jobNo=${encodeURIComponent(jobNo)}`);
+            const json = await res.json();
+            if (!json.ok) throw new Error(json.error || "Failed");
+            ugAllGroups = json.data || [];
+            renderUnitGroupsTable(ugAllGroups, true);
 
             const sidebarCount = document.getElementById("ugSidebarCount");
             if (sidebarCount) sidebarCount.textContent = ugAllGroups.length;
@@ -1458,7 +1452,9 @@
         }
     }
 
-    function renderUnitGroupsTable(groups) {
+    const ugEsc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+    function renderUnitGroupsTable(groups, jobChosen) {
         const tbody    = document.getElementById("ugTableBody");
         const emptyRow = document.getElementById("ugTableEmpty");
         if (!tbody) return;
@@ -1466,128 +1462,26 @@
         tbody.querySelectorAll("tr:not(#ugTableEmpty)").forEach(r => r.remove());
 
         if (groups.length === 0) {
-            emptyRow.querySelector("span").textContent = ugAllUnits.length
-                ? "No unit groups defined for this job yet"
-                : "Select a Job No. to manage unit groups";
+            emptyRow.querySelector("span").textContent = jobChosen
+                ? "PIMS has no units for this job"
+                : "Select a Job No. to view unit groups";
             emptyRow.style.display = "";
             return;
         }
         emptyRow.style.display = "none";
 
         groups.forEach((g, idx) => {
+            const names = g.member_names || {};
             const tr = document.createElement("tr");
             const memberChips = g.members.map(m =>
-                `<span class="ug-member-chip${m === g.master_unit_no ? ' ug-member-chip-master' : ''}">${m}</span>`
+                `<span class="ug-member-chip${m === g.master_unit_no ? ' ug-member-chip-master' : ''}" title="${ugEsc(names[m] || "")}">${ugEsc(m)}</span>`
             ).join(" ");
             tr.innerHTML = `
                 <td class="ug-td-num">${idx + 1}</td>
-                <td><span class="ug-tag-chip">${g.master_unit_no}</span></td>
-                <td>${memberChips}</td>
-                <td>
-                    <button class="ug-row-btn ug-edit-btn" data-master="${g.master_unit_no}">Edit</button>
-                    <button class="ug-row-btn ug-delete-btn" data-master="${g.master_unit_no}">Delete</button>
-                </td>`;
+                <td><span class="ug-tag-chip">${ugEsc(g.master_unit_no)}</span>${g.unit_name ? `<span class="ug-unit-name">${ugEsc(g.unit_name)}</span>` : ""}</td>
+                <td>${memberChips}</td>`;
             tbody.appendChild(tr);
         });
-
-        tbody.querySelectorAll(".ug-edit-btn").forEach(btn => {
-            btn.addEventListener("click", () => openUnitGroupForm(btn.dataset.master));
-        });
-        tbody.querySelectorAll(".ug-delete-btn").forEach(btn => {
-            btn.addEventListener("click", () => deleteUnitGroup(btn.dataset.master));
-        });
-    }
-
-    function openUnitGroupForm(masterUnitNo) {
-        ugEditingMaster = masterUnitNo || null;
-        const card         = document.getElementById("ugFormCard");
-        const title         = document.getElementById("ugFormTitle");
-        const masterSelect = document.getElementById("ugMasterSelect");
-        const memberGrid   = document.getElementById("ugMemberGrid");
-
-        title.textContent = ugEditingMaster ? `Edit Group — Master ${ugEditingMaster}` : "Create Unit Group";
-
-        const masterOptions = document.getElementById("ugMasterUnitOptions");
-        masterOptions.innerHTML = ugAllUnits.map(u => `<option value="${u}">`).join("");
-        masterSelect.value    = ugEditingMaster || "";
-        masterSelect.disabled = !!ugEditingMaster;
-
-        const existingGroup   = ugAllGroups.find(g => g.master_unit_no === masterUnitNo);
-        const selectedMembers = existingGroup ? existingGroup.members : [];
-
-        // A unit belongs to exactly one master. If it's already a member of a
-        // DIFFERENT group, disable it here — it must be removed from that group
-        // first before it can join this one.
-        const otherMasterOf = {};
-        ugAllGroups.forEach(g => {
-            if (g.master_unit_no === masterUnitNo) return;
-            g.members.forEach(m => { otherMasterOf[m] = g.master_unit_no; });
-        });
-
-        memberGrid.innerHTML = ugAllUnits.map(u => {
-            const checked  = selectedMembers.includes(u) ? "checked" : "";
-            const disabled = otherMasterOf[u] ? "disabled" : "";
-            const warn     = otherMasterOf[u] ? `<span class="ug-member-warn">already in Master ${otherMasterOf[u]}</span>` : "";
-            const itemCls  = otherMasterOf[u] ? "ug-member-item ug-member-item-disabled" : "ug-member-item";
-            return `<label class="${itemCls}"><input type="checkbox" value="${u}" ${checked} ${disabled}> ${u} ${warn}</label>`;
-        }).join("");
-
-        card.style.display = "";
-    }
-
-    document.getElementById("ugNewGroupBtn")?.addEventListener("click", () => openUnitGroupForm(null));
-    document.getElementById("ugCancelBtn")?.addEventListener("click", () => {
-        document.getElementById("ugFormCard").style.display = "none";
-        ugEditingMaster = null;
-    });
-
-    document.getElementById("ugSaveBtn")?.addEventListener("click", async function () {
-        const jobNo         = document.getElementById("ugJobSelect").value;
-        const masterUnitNo  = document.getElementById("ugMasterSelect").value.trim();
-        const memberUnitNos = Array.from(document.querySelectorAll("#ugMemberGrid input[type=checkbox]:checked")).map(cb => cb.value);
-
-        if (!jobNo) { showToast("⚠ Select a Job No. first"); return; }
-        if (!masterUnitNo) { showToast("⚠ Enter a master unit number"); return; }
-        if (memberUnitNos.length === 0) { showToast("⚠ Select at least one member unit"); return; }
-
-        try {
-            const createdBy = localStorage.getItem("employee_id") || "";
-            const res = await fetch('/api/master/unit-groups', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jobNo, masterUnitNo, memberUnitNos, createdBy })
-            });
-            const json = await res.json();
-            if (!json.ok) throw new Error(json.error || "Save failed");
-
-            showToast("✅ Unit group saved");
-            document.getElementById("ugFormCard").style.display = "none";
-            ugEditingMaster = null;
-            await loadUnitGroupsForJob(jobNo);
-        } catch (err) {
-            console.error("Save unit group error:", err);
-            showToast("❌ Could not save unit group");
-        }
-    });
-
-    async function deleteUnitGroup(masterUnitNo) {
-        const jobNo = document.getElementById("ugJobSelect").value;
-        if (!jobNo) return;
-        if (!confirm(`Dissolve unit group "${masterUnitNo}"? Member units will become standalone again.`)) return;
-
-        try {
-            const res = await fetch(`/api/master/unit-groups/${encodeURIComponent(masterUnitNo)}?jobNo=${encodeURIComponent(jobNo)}`, {
-                method: 'DELETE'
-            });
-            const json = await res.json();
-            if (!json.ok) throw new Error(json.error || "Delete failed");
-
-            showToast("🗑️ Unit group dissolved");
-            await loadUnitGroupsForJob(jobNo);
-        } catch (err) {
-            console.error("Delete unit group error:", err);
-            showToast("❌ Could not dissolve unit group");
-        }
     }
 
 

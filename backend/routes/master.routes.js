@@ -128,12 +128,16 @@ router.get('/unit-groups', requireJobRole(ROLES.READ), async (req, res) => {
             return res.status(400).json({ ok: false, error: 'jobNo is required' });
         }
 
+        // Every PIMS master unit of the job with its name and member units (read-only)
         const result = await pool.query(
-            `SELECT master_unit_no, array_agg(unit_no ORDER BY unit_no) AS members
-             FROM unit_master_map
-             WHERE job_no = $1
-             GROUP BY master_unit_no
-             ORDER BY master_unit_no`,
+            `SELECT m.unit_no AS master_unit_no, m.unit_name,
+                    array_agg(c.unit_no ORDER BY c.unit_no) AS members,
+                    json_object_agg(c.unit_no, COALESCE(c.unit_name, '')) AS member_names
+             FROM pims_units m
+             JOIN pims_units c ON c.job_no = m.job_no AND c.master_unit = m.unit_no
+             WHERE m.job_no = $1 AND m.is_master
+             GROUP BY m.unit_no, m.unit_name
+             ORDER BY m.unit_no`,
             [jobNo]
         );
 
