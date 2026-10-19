@@ -481,10 +481,17 @@
                 if (el) el.value = '';
             });
         }
+        // "Not in line list" caution — shown only when the lookup ran and found nothing
+        const llCaution = document.getElementById("cautionLineList");
+        if (llCaution) llCaution.classList.add("hidden");
         if (!skipTagRegen && lineId) {
             fetch(`/api/master/line-spec?lineId=${encodeURIComponent(lineId)}&jobNo=${encodeURIComponent(localStorage.getItem("jobno") || "")}`)
                 .then(r => r.json())
                 .then(json => {
+                    if (json.ok && !json.data && llCaution &&
+                        (document.getElementById("dia")?.value || "") === lineId) {
+                        llCaution.classList.remove("hidden");
+                    }
                     if (!json.ok || !json.data) return;
                     const d = json.data;
                     const set = (id, val) => {
@@ -1523,6 +1530,7 @@
             const _area = document.getElementById("area");
             if (_area) _area.readOnly = false;
             showZoneDropdown(null);
+            document.getElementById("cautionLineList")?.classList.add("hidden");
             updateImage();
             generateTag();
             updateSectionStatus();
