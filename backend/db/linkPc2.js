@@ -3,7 +3,7 @@
 //
 //   eil_employees (PC-2) → schema pc2_emp  (users)
 //   cmp_pims_1014 (PC-2) → schema pc2_pims (projects, units, user_unit_roles, project_sgls,
-//                                           stress_lines)
+//                                           stress_lines, lines)
 //   ePULSE DB     (PC-1) → schema pc1_epulse (line_list — the line list is kept in ePULSE,
 //                                           uploaded through ll-normalize.html; decided 2026-10-19)
 //
@@ -11,7 +11,7 @@
 //   master_employees  ← eil_employees.users        (no password column)
 //   stress_lines      ← PIMS stress_lines           (was synced every 10 min by cron)
 //   unit_master_map   ← PIMS units.parent_unit      (was SSMS's own grouping)
-// New views: pims_projects, pims_units, epulse_line_list, effective_assignments.
+// New views: pims_projects, pims_units, pims_line_zones, epulse_line_list, effective_assignments.
 // user_assignments stays SSMS's own table (LE / JE / MAT); its plain-text password
 // column is dropped — login is checked against eil_employees.
 //
@@ -92,7 +92,7 @@ async function main() {
         OPTIONS (user ${lit(p.user)}, password ${lit(p.password)});
       CREATE SCHEMA pc2_pims;
       IMPORT FOREIGN SCHEMA public
-        LIMIT TO (projects, units, user_unit_roles, project_sgls, stress_lines)
+        LIMIT TO (projects, units, user_unit_roles, project_sgls, stress_lines, lines)
         FROM SERVER pc2_pims INTO pc2_pims;
 
       CREATE SERVER pc1_epulse FOREIGN DATA WRAPPER postgres_fdw
@@ -182,6 +182,15 @@ async function main() {
         FROM pc2_pims.stress_lines s
         JOIN pc2_pims.projects pr ON pr.id = s.project_id AND pr.is_active = 1;
 
+      -- Zones of each line, from PIMS lines.line_no = <line id>-<zone letter>
+      -- (e.g. CL-101-02401-A, CL-101-02401-B → CL-101-02401: A, B). Deleted lines are left out.
+      CREATE VIEW public.pims_line_zones AS
+        SELECT DISTINCT l.project_id::text AS job_no, l.unit_no::text AS unit_no,
+               substring(l.line_no from '^(.*)-[A-Za-z]$')::text AS line_id,
+               upper(substring(l.line_no from '-([A-Za-z])$'))::text AS zone
+        FROM pc2_pims.lines l
+        WHERE coalesce(l.is_deleted, 0) = 0 AND l.line_no ~ '-[A-Za-z]$';
+
       -- Line specification (class, size, insulation, design temp) from the ePULSE line list (PC-1).
       -- unit_no is the unit code: "101 (PDH Unit)" / "101(PDH Unit)" → "101"
       CREATE VIEW public.epulse_line_list AS
@@ -227,6 +236,7 @@ async function main() {
              (SELECT count(*) FROM pims_units WHERE is_master)::int AS pims_master_units,
              (SELECT count(*) FROM stress_lines)::int AS stress_lines,
              (SELECT count(*) FROM epulse_line_list)::int AS epulse_line_list_rows,
+             (SELECT count(DISTINCT (job_no, line_id)) FROM pims_line_zones)::int AS lines_with_zones,
              (SELECT count(DISTINCT employee_id) FROM effective_assignments WHERE source = 'pims')::int AS gl_from_pims,
              (SELECT count(*) FROM effective_assignments WHERE source = 'assigned')::int AS stored_assignments_in_use,
              (SELECT count(*) FROM user_assignments)::int AS stored_assignments_total`);

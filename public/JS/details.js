@@ -390,6 +390,52 @@
     // valid set of units a NEW line can actually be attributed to.
     let currentRealUnits = [];
 
+    // Field 04 (Area / Zone): when PIMS has zones for the line (lines.line_no = <line id>-<zone>),
+    // offer them in a dropdown; otherwise keep the plain box. The box (#area) always holds the
+    // value that is saved — the dropdown just writes into it.
+    let zoneRequest = 0;
+    let zoneLineId = null;   // line whose zones the dropdown currently shows
+    function showZoneDropdown(zones) {
+        const areaEl = document.getElementById("area");
+        const sel = document.getElementById("areaSelect");
+        if (!areaEl || !sel) return;
+        if (!zones || !zones.length) {
+            sel.hidden = true; sel.disabled = true;
+            areaEl.hidden = false;
+            return;
+        }
+        // Keep a value already on the spring (editing) even if PIMS no longer lists it
+        const current = (areaEl.value || "").trim().toUpperCase();
+        const list = current && !zones.includes(current) ? [...zones, current] : zones;
+        sel.innerHTML = `<option value="">Select zone…</option>` + list.map(z =>
+            `<option value="${z}">${z}${zones.includes(z) ? "" : " (saved — not in PIMS)"}</option>`).join("");
+        sel.value = current || (zones.length === 1 ? zones[0] : "");
+        areaEl.value = sel.value;
+        areaEl.readOnly = true;          // validation checks the dropdown instead
+        areaEl.hidden = true;
+        sel.hidden = false; sel.disabled = false;
+        updateSectionStatus();
+    }
+
+    function loadLineZones(lineId) {
+        const req = ++zoneRequest;
+        const jobNo = localStorage.getItem("jobno") || "", unitNo = localStorage.getItem("unit") || "";
+        fetch(`/api/master/line-zones?jobNo=${encodeURIComponent(jobNo)}&unitNo=${encodeURIComponent(unitNo)}&lineId=${encodeURIComponent(lineId)}`)
+            .then(r => r.json())
+            .then(json => {
+                if (req !== zoneRequest) return;                  // a newer line was picked meanwhile
+                const stillSame = (document.getElementById("dia")?.value || "") === lineId;
+                if (json.ok && stillSame) { showZoneDropdown(json.data); zoneLineId = json.data.length ? lineId : null; }
+            })
+            .catch(() => {});                                     // PIMS unavailable — box stays
+    }
+
+    document.getElementById("areaSelect")?.addEventListener("change", e => {
+        const areaEl = document.getElementById("area");
+        if (areaEl) areaEl.value = e.target.value;
+        updateSectionStatus();
+    });
+
     // Applies a line selection: fills stress system, updates history & status
     function applyLineSelection(lineId, skipTagRegen) {
         const match = stressLineData.find(l => l.line_id === lineId);
@@ -411,7 +457,11 @@
         // Read-only when zone is detected; editable when line has no zone suffix.
         const zoneMatch = (lineId || "").match(/-([A-Za-z])$/);
         const areaEl = document.getElementById("area");
-        if (areaEl) {
+        // Same line re-applied (e.g. the Line ID box losing focus) — keep the zone list and choice
+        const sameZoneLine = !skipTagRegen && !!lineId && lineId === zoneLineId && !document.getElementById("areaSelect")?.hidden;
+        if (areaEl && !sameZoneLine) {
+            showZoneDropdown(null);   // back to the plain box until this line's zones are known
+            zoneLineId = null;
             if (zoneMatch) {
                 if (!skipTagRegen) areaEl.value = zoneMatch[1].toUpperCase();
                 areaEl.readOnly = true;
@@ -419,6 +469,7 @@
             } else {
                 if (!skipTagRegen) areaEl.value = "";  // clear stale zone from previous line
                 areaEl.readOnly = false;
+                if (lineId) loadLineZones(lineId);   // PIMS zones → dropdown
             }
         }
 
@@ -1471,6 +1522,7 @@
             // Restore area field to editable state after reset
             const _area = document.getElementById("area");
             if (_area) _area.readOnly = false;
+            showZoneDropdown(null);
             updateImage();
             generateTag();
             updateSectionStatus();

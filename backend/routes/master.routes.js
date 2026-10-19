@@ -245,6 +245,30 @@ router.post('/non-critical-lines', requireUnitRole(ROLES.EDIT), async (req, res)
 });
 
 /* =====================================================
+   5b. ZONES OF A LINE — live from PIMS lines.line_no (view pims_line_zones)
+   Field 04 (Area / Zone) on the Spring Details page offers these zones.
+   ===================================================== */
+router.get('/line-zones', requireUnitRole(ROLES.READ), async (req, res) => {
+    try {
+        const { jobNo, unitNo, lineId } = req.query;
+        if (!lineId) return res.status(400).json({ ok: false, error: 'lineId is required' });
+        const baseLineId = String(lineId).trim().replace(/-[A-Za-z]$/, '');
+        // The line may sit on any unit of the selected unit's group
+        const units = await getGroupMembers(jobNo, unitNo);
+        const result = await pool.query(
+            `SELECT DISTINCT zone FROM pims_line_zones
+             WHERE job_no = $1 AND line_id = $2 AND unit_no = ANY($3::text[])
+             ORDER BY zone`,
+            [jobNo, baseLineId, units]
+        );
+        res.json({ ok: true, lineId: baseLineId, data: result.rows.map(r => r.zone) });
+    } catch (err) {
+        console.error('[line-zones]', err.message);
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+/* =====================================================
    6. LINE SPEC FROM THE ePULSE LINE LIST ON PC-1 (view epulse_line_list)
    Live lookup by line ID — returns piping spec, size,
    insulation, insulation thickness, design temp.
