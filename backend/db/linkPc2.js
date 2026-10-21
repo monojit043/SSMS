@@ -195,7 +195,7 @@ async function main() {
       -- unit_no is the unit code: "101 (PDH Unit)" / "101(PDH Unit)" → "101"
       CREATE VIEW public.epulse_line_list AS
         SELECT project_id::text AS job_no,
-               COALESCE(substring(unit_no from '^s*(d+)'), split_part(unit_no, ' ', 1))::text AS unit_no,
+               COALESCE(substring(unit_no from '^\\s*(\\d+)'), split_part(unit_no, ' ', 1))::text AS unit_no,
                service::text AS service, line_no::text AS line_no,
                line_class::text AS piping_class, line_size::text AS line_size,
                insulation::text AS insulation, insulation_thickness::text AS insulation_thickness,
